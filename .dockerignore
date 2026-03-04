@@ -1,0 +1,37 @@
+# ── Node / npm ──────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log
+
+# ── Expo / React Native ──────────────────────
+.expo/
+.expo-shared/
+android/
+ios/
+*.apk
+*.aab
+*.ipa
+
+# ── TypeScript / Build output ────────────────
+dist/
+build/
+*.js.map
+
+# ── Development / IDE ────────────────────────
+.vscode/
+.idea/
+.DS_Store
+*.log
+*.txt
+
+# ── Git ──────────────────────────────────────
+.git/
+.gitignore
+
+# ── CI / Linter artefacts ────────────────────
+eslint.json
+eslint_errors.json
+eslint_report.json
+lint_output.txt
+tsc_*.log
+tsc_*.txt

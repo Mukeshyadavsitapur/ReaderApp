@@ -1,79 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
-// ---- GLOBAL ASYNCSTORAGE SAFETY PROXY ----
-// SQLite (AsyncStorage's backend) can throw SQLITE_FULL (code 13) even during READ operations
-// (getItem, multiGet) if the WAL file or disk is completely full. We globally wrap the read 
-// and write methods to swallow the error and return null/void, preventing uncaught promise crash loops.
-
-export let globalAutoFreeStorage: (() => Promise<void>) | null = null;
-export let isCurrentlyPruning = false; // Lock to prevent explosive recursive pruning
-
-export const _originalGetItem = AsyncStorage.getItem.bind(AsyncStorage);
-export const _originalMultiGet = AsyncStorage.multiGet.bind(AsyncStorage);
-export const _originalSetItem = AsyncStorage.setItem.bind(AsyncStorage);
-export const _originalMultiSet = AsyncStorage.multiSet.bind(AsyncStorage);
-export const _originalMultiRemove = AsyncStorage.multiRemove.bind(AsyncStorage);
-
-const handleStorageError = (e: any, action: string) => {
-    if (isCurrentlyPruning) return; // Silent abort if already handling a crash
-    const msg = String(e?.message ?? '');
-    const code = String(e?.code ?? e?.cause?.code ?? '');
-    if (msg.includes('SQLITE_FULL') || msg.includes('database or disk is full') || code.includes('13')) {
-        console.warn(`[SafeStorage] ${action} intercepted SQLITE_FULL. Triggering auto-prune...`);
-        if (globalAutoFreeStorage) {
-            isCurrentlyPruning = true;
-            globalAutoFreeStorage().finally(() => {
-                isCurrentlyPruning = false;
-            }).catch(pruneErr => console.warn("Global prune failed", pruneErr));
-        }
-    } else {
-        console.warn(`[SafeStorage] ${action} error:`, e);
-    }
-};
-
-AsyncStorage.getItem = async (key: string, callback?: any) => {
-    try {
-        return await _originalGetItem(key, callback);
-    } catch (e: any) {
-        handleStorageError(e, `getItem(${key})`);
-        return null; // Safe fallback
-    }
-};
-
-AsyncStorage.multiGet = async (keys: readonly string[], callback?: any) => {
-    try {
-        return await _originalMultiGet(keys, callback);
-    } catch (e: any) {
-        handleStorageError(e, `multiGet`);
-        return keys.map(k => [k, null] as [string, string | null]);
-    }
-};
-
-AsyncStorage.setItem = async (key: string, value: string, callback?: any) => {
-    try {
-        await _originalSetItem(key, value, callback);
-    } catch (e: any) {
-        handleStorageError(e, `setItem(${key})`);
-    }
-};
-
-// @ts-ignore - Ignore complex readonly tuple array mismatches
-AsyncStorage.multiSet = async (keyValuePairs: readonly (readonly [string, string])[], callback?: any) => {
-    try {
-        await _originalMultiSet(keyValuePairs as any, callback);
-    } catch (e: any) {
-        handleStorageError(e, `multiSet`);
-    }
-};
-
-AsyncStorage.multiRemove = async (keys: readonly string[], callback?: any) => {
-    try {
-        await _originalMultiRemove(keys, callback);
-    } catch (e: any) {
-        handleStorageError(e, `multiRemove`);
-    }
-};
 // ------------------------------------------
 import { createAudioPlayer, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
@@ -241,6 +166,81 @@ import {
     View
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+
+
+// ---- GLOBAL ASYNCSTORAGE SAFETY PROXY ----
+// SQLite (AsyncStorage's backend) can throw SQLITE_FULL (code 13) even during READ operations
+// (getItem, multiGet) if the WAL file or disk is completely full. We globally wrap the read 
+// and write methods to swallow the error and return null/void, preventing uncaught promise crash loops.
+
+export let globalAutoFreeStorage: (() => Promise<void>) | null = null;
+export let isCurrentlyPruning = false; // Lock to prevent explosive recursive pruning
+
+export const _originalGetItem = AsyncStorage.getItem.bind(AsyncStorage);
+export const _originalMultiGet = AsyncStorage.multiGet.bind(AsyncStorage);
+export const _originalSetItem = AsyncStorage.setItem.bind(AsyncStorage);
+export const _originalMultiSet = AsyncStorage.multiSet.bind(AsyncStorage);
+export const _originalMultiRemove = AsyncStorage.multiRemove.bind(AsyncStorage);
+
+const handleStorageError = (e: any, action: string) => {
+    if (isCurrentlyPruning) return; // Silent abort if already handling a crash
+    const msg = String(e?.message ?? '');
+    const code = String(e?.code ?? e?.cause?.code ?? '');
+    if (msg.includes('SQLITE_FULL') || msg.includes('database or disk is full') || code.includes('13')) {
+        console.warn(`[SafeStorage] ${action} intercepted SQLITE_FULL. Triggering auto-prune...`);
+        if (globalAutoFreeStorage) {
+            isCurrentlyPruning = true;
+            globalAutoFreeStorage().finally(() => {
+                isCurrentlyPruning = false;
+            }).catch(pruneErr => console.warn("Global prune failed", pruneErr));
+        }
+    } else {
+        console.warn(`[SafeStorage] ${action} error:`, e);
+    }
+};
+
+AsyncStorage.getItem = async (key: string, callback?: any) => {
+    try {
+        return await _originalGetItem(key, callback);
+    } catch (e: any) {
+        handleStorageError(e, `getItem(${key})`);
+        return null; // Safe fallback
+    }
+};
+
+AsyncStorage.multiGet = async (keys: readonly string[], callback?: any) => {
+    try {
+        return await _originalMultiGet(keys, callback);
+    } catch (e: any) {
+        handleStorageError(e, `multiGet`);
+        return keys.map(k => [k, null] as [string, string | null]);
+    }
+};
+
+AsyncStorage.setItem = async (key: string, value: string, callback?: any) => {
+    try {
+        await _originalSetItem(key, value, callback);
+    } catch (e: any) {
+        handleStorageError(e, `setItem(${key})`);
+    }
+};
+
+// @ts-ignore - Ignore complex readonly tuple array mismatches
+AsyncStorage.multiSet = async (keyValuePairs: readonly (readonly [string, string])[], callback?: any) => {
+    try {
+        await _originalMultiSet(keyValuePairs as any, callback);
+    } catch (e: any) {
+        handleStorageError(e, `multiSet`);
+    }
+};
+
+AsyncStorage.multiRemove = async (keys: readonly string[], callback?: any) => {
+    try {
+        await _originalMultiRemove(keys, callback);
+    } catch (e: any) {
+        handleStorageError(e, `multiRemove`);
+    }
+};
 
 // TypeScript Components (Consolidated)
 
@@ -441,18 +441,6 @@ export interface StorageStats {
 }
 
 // Component Props Types
-export interface SimpleTableProps {
-    rows: string[];
-    theme: Theme;
-    onExpand?: (data: string[]) => void;
-    isFullScreen?: boolean;
-    initiallyHidden?: boolean;
-    toggleLabel?: string;
-    fontSize?: number;
-    initialCustomWidths?: Record<number, number>;
-    onSaveWidths?: (colIndex: number, width: number | null) => void;
-}
-
 // OPTIMIZATION: Memoized Library Items to prevent re-renders
 interface LibrarySessionItemProps {
     session: any;
@@ -734,6 +722,7 @@ const LibraryGroupItem = React.memo(({ session, theme, isSelectionMode, selected
         prev.theme.id === next.theme.id &&
         prev.isLandscape === next.isLandscape;
 });
+LibraryGroupItem.displayName = 'LibraryGroupItem';
 
 export interface SimpleTableProps {
     rows: string[];
@@ -757,7 +746,7 @@ export interface ParsedTextProps {
 export interface InteractiveTextProps {
     rawText: string;
     onWordPress?: (word: string) => void;
-    onLinkPress?: (url: string) => void;
+    onLinkPress?: (url: string) => boolean | void;
     style?: any;
     activeSentence?: SpeechRange | null;
     paragraphOffset?: number;
@@ -879,32 +868,6 @@ const SimpleTable: React.FC<SimpleTableProps> = ({
     const scaledFontSize = BASE_FONT_SIZE * fontSize;
     const headerFontSize = 11 * fontSize;
 
-    if (!rows || rows.length === 0) return null;
-
-    if (!isVisible) {
-        return (
-            <TouchableOpacity
-                onPress={() => setIsVisible(true)}
-                style={{
-                    marginVertical: 15,
-                    backgroundColor: theme.uiBg,
-                    padding: 15,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: theme.border,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                    borderStyle: 'dashed'
-                }}
-            >
-                <Eye size={20} color={theme.id === 'day' ? '#2563eb' : theme.primary} />
-                <Text style={{ color: theme.id === 'day' ? '#2563eb' : theme.primary, fontWeight: 'bold', fontSize: 14 * fontSize }}>{toggleLabel}</Text>
-            </TouchableOpacity>
-        );
-    }
-
     const parsedRows = rows.map(row => {
         const content = row.trim().replace(/^\||\|$/g, '');
         return content.split('|').map(cell => cell.trim());
@@ -915,15 +878,13 @@ const SimpleTable: React.FC<SimpleTableProps> = ({
         return !/^[\s\-:]+$/.test(str);
     });
 
-    if (dataRows.length === 0) return null;
-
     let headers: string[] = [];
     let body: string[][] = [];
 
     if (dataRows.length === 1) {
         headers = dataRows[0].map((_, i) => `Column ${i + 1}`);
         body = dataRows;
-    } else {
+    } else if (dataRows.length > 1) {
         headers = dataRows[0];
         body = dataRows.slice(1);
     }
@@ -971,6 +932,35 @@ const SimpleTable: React.FC<SimpleTableProps> = ({
 
         return finalWidths.map((w, i) => customWidths[i] !== undefined ? customWidths[i] : w);
     }, [headers, body, isFullScreen, windowWidth, customWidths, scaledFontSize, fontSize]);
+
+    if (!rows || rows.length === 0) return null;
+
+    if (!isVisible) {
+        return (
+            <TouchableOpacity
+                onPress={() => setIsVisible(true)}
+                style={{
+                    marginVertical: 15,
+                    backgroundColor: theme.uiBg,
+                    padding: 15,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    borderStyle: 'dashed'
+                }}
+            >
+                <Eye size={20} color={theme.id === 'day' ? '#2563eb' : theme.primary} />
+                <Text style={{ color: theme.id === 'day' ? '#2563eb' : theme.primary, fontWeight: 'bold', fontSize: 14 * fontSize }}>{toggleLabel}</Text>
+            </TouchableOpacity>
+        );
+    }
+
+    if (dataRows.length === 0) return null;
+
 
     const renderCellText = (text: string, isHeader: boolean) => {
         const parts = text.split(/(\*\*.*?\*\*|\$.*?\$|\*[^*]+?\*)/g);
@@ -4190,7 +4180,7 @@ const InteractiveText = React.memo(({ rawText, onWordPress, onLinkPress, style, 
                             } else if (type === 'formula') {
                                 wordColor = dynamicColor;
                                 wordWeight = dynamicWeight;
-                                var fontFamily = 'serif';
+                                let fontFamily = 'serif';
                                 if (Platform.OS === 'ios') fontFamily = 'Georgia';
                             }
 
@@ -4254,7 +4244,7 @@ const InteractiveText = React.memo(({ rawText, onWordPress, onLinkPress, style, 
                                                 text: "Paragraph Highlight"
                                             });
                                         } else if (isLink && linkUrl) {
-                                            const handled = onLinkPress && onLinkPress(linkUrl);
+                                            const handled = onLinkPress?.(linkUrl);
                                             if (handled) return;
                                             Linking.openURL(linkUrl).catch(err => Alert.alert("Error", "Cannot open this link."));
                                         } else if (isUrl) {
@@ -4916,6 +4906,7 @@ const QuizNavButtons = React.memo(({ currentIndex, totalQuestions, isExamMode, t
         )}
     </View>
 ));
+QuizNavButtons.displayName = 'QuizNavButtons';
 
 const QuizOptionsList = React.memo(({ options, selected, correctOptionIndex, showResult, isExamMode, theme, onSelect, fontFamily, textStyles, getTypographyStyle }: any) => (
     <View style={{ gap: 12 }}>
@@ -4974,6 +4965,7 @@ const QuizOptionsList = React.memo(({ options, selected, correctOptionIndex, sho
         })}
     </View>
 ));
+QuizOptionsList.displayName = 'QuizOptionsList';
 
 const QuizContentHeader = React.memo(({ currentIndex, contextText, showReferenceText, setShowReferenceText, visualUri, isGeneratingVisual, onGenerateVisual, theme, primaryColor, showResult, qSelected, qCorrectIndex }: any) => (
     <View style={{ marginBottom: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -5028,6 +5020,7 @@ const QuizContentHeader = React.memo(({ currentIndex, contextText, showReference
         )}
     </View>
 ));
+QuizContentHeader.displayName = 'QuizContentHeader';
 
 // NEW: Extracted QuestionSlider Component to prevent scroll reset on re-render
 const QuestionSlider = React.memo(({ questions, currentIndex, onJump, theme, isExamMode }: any) => {
@@ -5088,6 +5081,9 @@ const QuestionSlider = React.memo(({ questions, currentIndex, onJump, theme, isE
         </ScrollView>
     );
 });
+QuestionSlider.displayName = 'QuestionSlider';
+InteractiveText.displayName = 'InteractiveText';
+LibrarySessionItem.displayName = 'LibrarySessionItem';
 
 // --- Main App Component ---
 const styles = StyleSheet.create({
@@ -5263,7 +5259,7 @@ const OnboardingModal = ({ visible, onClose, theme, onSave }: any) => {
             >
                 <View style={{ flex: 1, backgroundColor: theme.bg, padding: 20, paddingTop: 60 }}>
                     <Text style={{ fontSize: 28, fontWeight: 'bold', color: theme.text, marginBottom: 10, textAlign: 'center' }}>Welcome! 👋</Text>
-                    <Text style={{ fontSize: 16, color: theme.secondary, marginBottom: 20, textAlign: 'center' }}>Let's personalize your experience.</Text>
+                    <Text style={{ fontSize: 16, color: theme.secondary, marginBottom: 20, textAlign: 'center' }}>Let&apos;s personalize your experience.</Text>
 
                     {/* Elite Pass Banner */}
                     <View style={{
@@ -16104,7 +16100,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                                 <View style={{ marginTop: 10, width: '100%' }}>
                                                     <Text style={{ fontSize: 12, fontWeight: 'bold', color: theme.secondary, marginBottom: 8, alignSelf: 'center' }}>EXAMPLE</Text>
                                                     <Text style={{ fontSize: 15, color: theme.text, fontStyle: 'italic', textAlign: 'center', marginBottom: 8, opacity: 0.9 }}>
-                                                        "{currentItem.example}"
+                                                        &quot;{currentItem.example}&quot;
                                                     </Text>
                                                 </View>
                                             )}
@@ -16154,7 +16150,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                                     <Text style={{ fontSize: 12, fontWeight: 'bold', color: theme.secondary, marginBottom: 8, alignSelf: 'center' }}>EXAMPLES</Text>
                                                     {currentItem.examples.slice(0, 3).map((ex: any, idx: number) => (
                                                         <Text key={idx} style={{ fontSize: 15, color: theme.text, fontStyle: 'italic', textAlign: 'center', marginBottom: 8, opacity: 0.9 }}>
-                                                            "{ex}"
+                                                            &quot;{ex}&quot;
                                                         </Text>
                                                     ))}
                                                 </View>
@@ -29717,7 +29713,7 @@ Review the following raw transcribed text:
                                                                 </TouchableOpacity>
                                                             </View>
                                                             <Text style={{ fontSize: 10, color: theme.secondary, marginTop: 5, fontStyle: 'italic' }}>
-                                                                Tip: Enter "Title: Description" or just click the book icon for a story based on your profile.
+                                                                Tip: Enter &quot;Title: Description&quot; or just click the book icon for a story based on your profile.
                                                             </Text>
                                                         </View>
 
