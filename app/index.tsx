@@ -5288,9 +5288,9 @@ const OnboardingModal = ({ visible, onClose, theme, onSave }: any) => {
                             <Crown size={24} color="white" fill="white" />
                         </View>
                         <View style={{ flex: 1 }}>
-                            <Text style={{ color: '#EAB308', fontWeight: '800', fontSize: 13, textTransform: 'uppercase', marginBottom: 2, letterSpacing: 0.5 }}>Early Access Bonus</Text>
+                            <Text style={{ color: '#EAB308', fontWeight: '800', fontSize: 13, textTransform: 'uppercase', marginBottom: 2, letterSpacing: 0.5 }}>Our motive is to Make Ai for Everyone</Text>
                             <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600' }}>
-                                Elite Pass unlocked until <Text style={{ color: '#EAB308' }}>Dec 31, 2026</Text>
+                                If you find useful <Text style={{ color: '#EAB308' }}>please share with friends</Text>
                             </Text>
                         </View>
                     </View>
@@ -25672,11 +25672,27 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                         <Text style={{ fontSize: 13, fontWeight: '700', color: theme.secondary, textTransform: 'uppercase' }}>
                             Manage LLM Models
                         </Text>
-                        {showModelManagement ? (
-                            <ChevronUp size={16} color={theme.secondary} />
-                        ) : (
-                            <ChevronDown size={16} color={theme.secondary} />
-                        )}
+                        <View style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 16,
+                            backgroundColor: theme.uiBg,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderWidth: 1,
+                            borderColor: theme.border,
+                            shadowColor: "#000",
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 2,
+                            elevation: 1
+                        }}>
+                            {showModelManagement ? (
+                                <ChevronUp size={20} color={primaryColor} />
+                            ) : (
+                                <ChevronDown size={20} color={primaryColor} />
+                            )}
+                        </View>
                     </TouchableOpacity>
 
 
@@ -25723,244 +25739,244 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                 placeholder="Add Groq model id..."
                             />
 
-                    <EditableSelectionList
-                        label="IMAGE GENERATION MODELS"
-                        items={displaySettings.imageModels || [...IMAGE_MODELS]}
-                        onSelect={() => { }}
-                        onAdd={(model: string) => {
-                            const current = displaySettings.imageModels || [...IMAGE_MODELS];
-                            if (!current.includes(model)) {
-                                saveSettings({ imageModels: [model, ...current] });
-                            }
-                        }}
-                        onDelete={(model: string) => {
-                            const current = displaySettings.imageModels || [...IMAGE_MODELS];
-                            saveSettings({ imageModels: current.filter((m: string) => m !== model) });
-                        }}
-                        theme={theme}
-                        placeholder="Add Image model id..."
-                    />
+                            <EditableSelectionList
+                                label="IMAGE GENERATION MODELS"
+                                items={displaySettings.imageModels || [...IMAGE_MODELS]}
+                                onSelect={() => { }}
+                                onAdd={(model: string) => {
+                                    const current = displaySettings.imageModels || [...IMAGE_MODELS];
+                                    if (!current.includes(model)) {
+                                        saveSettings({ imageModels: [model, ...current] });
+                                    }
+                                }}
+                                onDelete={(model: string) => {
+                                    const current = displaySettings.imageModels || [...IMAGE_MODELS];
+                                    saveSettings({ imageModels: current.filter((m: string) => m !== model) });
+                                }}
+                                theme={theme}
+                                placeholder="Add Image model id..."
+                            />
 
-                    <EditableSelectionList
-                        label="GEMINI TTS MODELS"
-                        items={displaySettings.ttsModels || [...TTS_MODELS]}
-                        onSelect={() => { }}
-                        onAdd={(model: string) => {
-                            const current = displaySettings.ttsModels || [...TTS_MODELS];
-                            if (!current.includes(model)) {
-                                saveSettings({ ttsModels: [model, ...current] });
-                            }
-                        }}
-                        onDelete={(model: string) => {
-                            const current = displaySettings.ttsModels || [...TTS_MODELS];
-                            saveSettings({ ttsModels: current.filter((m: string) => m !== model) });
-                        }}
-                        theme={theme}
-                        placeholder="Add Gemini TTS model id..."
-                    />
+                            <EditableSelectionList
+                                label="GEMINI TTS MODELS"
+                                items={displaySettings.ttsModels || [...TTS_MODELS]}
+                                onSelect={() => { }}
+                                onAdd={(model: string) => {
+                                    const current = displaySettings.ttsModels || [...TTS_MODELS];
+                                    if (!current.includes(model)) {
+                                        saveSettings({ ttsModels: [model, ...current] });
+                                    }
+                                }}
+                                onDelete={(model: string) => {
+                                    const current = displaySettings.ttsModels || [...TTS_MODELS];
+                                    saveSettings({ ttsModels: current.filter((m: string) => m !== model) });
+                                }}
+                                theme={theme}
+                                placeholder="Add Gemini TTS model id..."
+                            />
 
-                    <EditableSelectionList
-                        label="GROQ TTS MODELS"
-                        items={displaySettings.groqTtsModels || [...GROQ_TTS_MODELS]}
-                        onSelect={() => { }}
-                        onAdd={(model: string) => {
-                            const current = displaySettings.groqTtsModels || [...GROQ_TTS_MODELS];
-                            if (!current.includes(model)) {
-                                saveSettings({ groqTtsModels: [model, ...current] });
-                            }
-                        }}
-                        onDelete={(model: string) => {
-                            const current = displaySettings.groqTtsModels || [...GROQ_TTS_MODELS];
-                            saveSettings({ groqTtsModels: current.filter((m: string) => m !== model) });
-                        }}
-                        theme={theme}
-                        placeholder="Add Groq TTS model id..."
-                    />
+                            <EditableSelectionList
+                                label="GROQ TTS MODELS"
+                                items={displaySettings.groqTtsModels || [...GROQ_TTS_MODELS]}
+                                onSelect={() => { }}
+                                onAdd={(model: string) => {
+                                    const current = displaySettings.groqTtsModels || [...GROQ_TTS_MODELS];
+                                    if (!current.includes(model)) {
+                                        saveSettings({ groqTtsModels: [model, ...current] });
+                                    }
+                                }}
+                                onDelete={(model: string) => {
+                                    const current = displaySettings.groqTtsModels || [...GROQ_TTS_MODELS];
+                                    saveSettings({ groqTtsModels: current.filter((m: string) => m !== model) });
+                                }}
+                                theme={theme}
+                                placeholder="Add Groq TTS model id..."
+                            />
 
-                    <EditableSelectionList
-                        label="GEMINI STT MODELS (CHATBOT)"
-                        items={displaySettings.sttGeminiModels || ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro']}
-                        onSelect={() => { }}
-                        onAdd={(model: string) => {
-                            const current = displaySettings.sttGeminiModels || ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
-                            if (!current.includes(model)) {
-                                saveSettings({ sttGeminiModels: [model, ...current] });
-                            }
-                        }}
-                        onDelete={(model: string) => {
-                            const current = displaySettings.sttGeminiModels || ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
-                            saveSettings({ sttGeminiModels: current.filter((m: string) => m !== model) });
-                        }}
-                        theme={theme}
-                        placeholder="Add Gemini STT model id..."
-                    />
+                            <EditableSelectionList
+                                label="GEMINI STT MODELS (CHATBOT)"
+                                items={displaySettings.sttGeminiModels || ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro']}
+                                onSelect={() => { }}
+                                onAdd={(model: string) => {
+                                    const current = displaySettings.sttGeminiModels || ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
+                                    if (!current.includes(model)) {
+                                        saveSettings({ sttGeminiModels: [model, ...current] });
+                                    }
+                                }}
+                                onDelete={(model: string) => {
+                                    const current = displaySettings.sttGeminiModels || ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
+                                    saveSettings({ sttGeminiModels: current.filter((m: string) => m !== model) });
+                                }}
+                                theme={theme}
+                                placeholder="Add Gemini STT model id..."
+                            />
 
-                    <EditableSelectionList
-                        label="GROQ STT MODELS (CHATBOT)"
-                        items={displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3']}
-                        onSelect={() => { }}
-                        onAdd={(model: string) => {
-                            const current = displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3'];
-                            if (!current.includes(model)) {
-                                saveSettings({ sttGroqModels: [model, ...current] });
-                            }
-                        }}
-                        onDelete={(model: string) => {
-                            const current = displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3'];
-                            saveSettings({ sttGroqModels: current.filter((m: string) => m !== model) });
-                        }}
-                        theme={theme}
-                        placeholder="Add Groq STT model id..."
-                    />
+                            <EditableSelectionList
+                                label="GROQ STT MODELS (CHATBOT)"
+                                items={displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3']}
+                                onSelect={() => { }}
+                                onAdd={(model: string) => {
+                                    const current = displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3'];
+                                    if (!current.includes(model)) {
+                                        saveSettings({ sttGroqModels: [model, ...current] });
+                                    }
+                                }}
+                                onDelete={(model: string) => {
+                                    const current = displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3'];
+                                    saveSettings({ sttGroqModels: current.filter((m: string) => m !== model) });
+                                }}
+                                theme={theme}
+                                placeholder="Add Groq STT model id..."
+                            />
 
-                    <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 20 }} />
+                            <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 20 }} />
 
-                    {/* Online TTS */}
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                        <View style={{ flex: 1, marginRight: 10 }}>
-                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text, marginBottom: 4 }}>Online TTS</Text>
-                            <Text style={{ fontSize: 12, color: theme.secondary }}>
-                                High quality AI narrator
-                            </Text>
-                            {displaySettings.onlineTtsEnabled && (
-                                <Text style={{ fontSize: 11, color: '#f97316', marginTop: 4, fontStyle: 'italic' }}>
-                                    ⚠️ Note: Online TTS may slow down AI response times.
-                                </Text>
-                            )}
-                        </View>
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={() => saveSettings({ onlineTtsEnabled: !displaySettings.onlineTtsEnabled })}
-                            style={{
-                                width: 60,
-                                height: 32,
-                                backgroundColor: displaySettings.onlineTtsEnabled ? '#22c55e' : theme.buttonBg,
-                                borderRadius: 16, // Round/Pill shape
-                                borderWidth: 1,
-                                borderColor: displaySettings.onlineTtsEnabled ? '#22c55e' : theme.border,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                paddingHorizontal: 4,
-                                justifyContent: displaySettings.onlineTtsEnabled ? 'flex-end' : 'flex-start'
-                            }}
-                        >
-                            {displaySettings.onlineTtsEnabled && (
-                                <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold', marginRight: 6 }}>ON</Text>
-                            )}
-                            <View style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 12, // Circular thumb
-                                backgroundColor: 'white',
-                                shadowColor: "#000",
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.2,
-                                shadowRadius: 1,
-                                elevation: 2
-                            }} />
-                            {!displaySettings.onlineTtsEnabled && (
-                                <Text style={{ color: theme.secondary, fontSize: 10, fontWeight: 'bold', marginLeft: 6 }}>OFF</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
+                            {/* Online TTS */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                <View style={{ flex: 1, marginRight: 10 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text, marginBottom: 4 }}>Online TTS</Text>
+                                    <Text style={{ fontSize: 12, color: theme.secondary }}>
+                                        High quality AI narrator
+                                    </Text>
+                                    {displaySettings.onlineTtsEnabled && (
+                                        <Text style={{ fontSize: 11, color: '#f97316', marginTop: 4, fontStyle: 'italic' }}>
+                                            ⚠️ Note: Online TTS may slow down AI response times.
+                                        </Text>
+                                    )}
+                                </View>
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={() => saveSettings({ onlineTtsEnabled: !displaySettings.onlineTtsEnabled })}
+                                    style={{
+                                        width: 60,
+                                        height: 32,
+                                        backgroundColor: displaySettings.onlineTtsEnabled ? '#22c55e' : theme.buttonBg,
+                                        borderRadius: 16, // Round/Pill shape
+                                        borderWidth: 1,
+                                        borderColor: displaySettings.onlineTtsEnabled ? '#22c55e' : theme.border,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        paddingHorizontal: 4,
+                                        justifyContent: displaySettings.onlineTtsEnabled ? 'flex-end' : 'flex-start'
+                                    }}
+                                >
+                                    {displaySettings.onlineTtsEnabled && (
+                                        <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold', marginRight: 6 }}>ON</Text>
+                                    )}
+                                    <View style={{
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: 12, // Circular thumb
+                                        backgroundColor: 'white',
+                                        shadowColor: "#000",
+                                        shadowOffset: { width: 0, height: 1 },
+                                        shadowOpacity: 0.2,
+                                        shadowRadius: 1,
+                                        elevation: 2
+                                    }} />
+                                    {!displaySettings.onlineTtsEnabled && (
+                                        <Text style={{ color: theme.secondary, fontSize: 10, fontWeight: 'bold', marginLeft: 6 }}>OFF</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
 
-                    {/* Offline STT */}
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                        <View style={{ flex: 1, marginRight: 10 }}>
-                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text, marginBottom: 4 }}>Offline STT</Text>
-                            <Text style={{ fontSize: 12, color: theme.secondary }}>
-                                Use device dictation (No internet needed)
-                            </Text>
-                            {!displaySettings.offlineSttEnabled && (
-                                <Text style={{ fontSize: 11, color: '#f97316', marginTop: 4, fontStyle: 'italic' }}>
-                                    ⚠️ Note: Online STT may slow down AI response times.
-                                </Text>
-                            )}
-                        </View>
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={() => saveSettings({ offlineSttEnabled: !displaySettings.offlineSttEnabled })}
-                            style={{
-                                width: 60,
-                                height: 32,
-                                backgroundColor: displaySettings.offlineSttEnabled ? '#22c55e' : theme.buttonBg,
-                                borderRadius: 16,
-                                borderWidth: 1,
-                                borderColor: displaySettings.offlineSttEnabled ? '#22c55e' : theme.border,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                paddingHorizontal: 4,
-                                justifyContent: displaySettings.offlineSttEnabled ? 'flex-end' : 'flex-start'
-                            }}
-                        >
-                            {displaySettings.offlineSttEnabled && (
-                                <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold', marginRight: 6 }}>ON</Text>
-                            )}
-                            <View style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 12,
-                                backgroundColor: 'white',
-                                shadowColor: "#000",
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.2,
-                                shadowRadius: 1,
-                                elevation: 2
-                            }} />
-                            {!displaySettings.offlineSttEnabled && (
-                                <Text style={{ color: theme.secondary, fontSize: 10, fontWeight: 'bold', marginLeft: 6 }}>OFF</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
+                            {/* Offline STT */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                <View style={{ flex: 1, marginRight: 10 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text, marginBottom: 4 }}>Offline STT</Text>
+                                    <Text style={{ fontSize: 12, color: theme.secondary }}>
+                                        Use device dictation (No internet needed)
+                                    </Text>
+                                    {!displaySettings.offlineSttEnabled && (
+                                        <Text style={{ fontSize: 11, color: '#f97316', marginTop: 4, fontStyle: 'italic' }}>
+                                            ⚠️ Note: Online STT may slow down AI response times.
+                                        </Text>
+                                    )}
+                                </View>
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={() => saveSettings({ offlineSttEnabled: !displaySettings.offlineSttEnabled })}
+                                    style={{
+                                        width: 60,
+                                        height: 32,
+                                        backgroundColor: displaySettings.offlineSttEnabled ? '#22c55e' : theme.buttonBg,
+                                        borderRadius: 16,
+                                        borderWidth: 1,
+                                        borderColor: displaySettings.offlineSttEnabled ? '#22c55e' : theme.border,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        paddingHorizontal: 4,
+                                        justifyContent: displaySettings.offlineSttEnabled ? 'flex-end' : 'flex-start'
+                                    }}
+                                >
+                                    {displaySettings.offlineSttEnabled && (
+                                        <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold', marginRight: 6 }}>ON</Text>
+                                    )}
+                                    <View style={{
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: 12,
+                                        backgroundColor: 'white',
+                                        shadowColor: "#000",
+                                        shadowOffset: { width: 0, height: 1 },
+                                        shadowOpacity: 0.2,
+                                        shadowRadius: 1,
+                                        elevation: 2
+                                    }} />
+                                    {!displaySettings.offlineSttEnabled && (
+                                        <Text style={{ color: theme.secondary, fontSize: 10, fontWeight: 'bold', marginLeft: 6 }}>OFF</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
 
-                    {/* AI Images */}
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View style={{ flex: 1, marginRight: 10 }}>
-                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text, marginBottom: 4 }}>AI Images</Text>
-                            <Text style={{ fontSize: 12, color: theme.secondary }}>
-                                {displaySettings.llmProvider === 'groq' ? 'Generate visual diagrams (via Gemini)' : 'Generate visual diagrams'}
-                            </Text>
-                            {displaySettings.imageGenerationEnabled && (
-                                <Text style={{ fontSize: 11, color: '#f97316', marginTop: 4, fontStyle: 'italic' }}>
-                                    ⚠️ Note: AI Image generation may slow down AI response times.
-                                </Text>
-                            )}
-                        </View>
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={() => saveSettings({ imageGenerationEnabled: !displaySettings.imageGenerationEnabled })}
-                            style={{
-                                width: 60,
-                                height: 32,
-                                backgroundColor: displaySettings.imageGenerationEnabled ? '#22c55e' : theme.buttonBg,
-                                borderRadius: 16, // Round/Pill shape
-                                borderWidth: 1,
-                                borderColor: displaySettings.imageGenerationEnabled ? '#22c55e' : theme.border,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                paddingHorizontal: 4,
-                                justifyContent: displaySettings.imageGenerationEnabled ? 'flex-end' : 'flex-start'
-                            }}
-                        >
-                            {displaySettings.imageGenerationEnabled && (
-                                <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold', marginRight: 6 }}>ON</Text>
-                            )}
-                            <View style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 12, // Circular thumb
-                                backgroundColor: 'white',
-                                shadowColor: "#000",
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.2,
-                                shadowRadius: 1,
-                                elevation: 2
-                            }} />
-                            {!displaySettings.imageGenerationEnabled && (
-                                <Text style={{ color: theme.secondary, fontSize: 10, fontWeight: 'bold', marginLeft: 6 }}>OFF</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
+                            {/* AI Images */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <View style={{ flex: 1, marginRight: 10 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text, marginBottom: 4 }}>AI Images</Text>
+                                    <Text style={{ fontSize: 12, color: theme.secondary }}>
+                                        {displaySettings.llmProvider === 'groq' ? 'Generate visual diagrams (via Gemini)' : 'Generate visual diagrams'}
+                                    </Text>
+                                    {displaySettings.imageGenerationEnabled && (
+                                        <Text style={{ fontSize: 11, color: '#f97316', marginTop: 4, fontStyle: 'italic' }}>
+                                            ⚠️ Note: AI Image generation may slow down AI response times.
+                                        </Text>
+                                    )}
+                                </View>
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={() => saveSettings({ imageGenerationEnabled: !displaySettings.imageGenerationEnabled })}
+                                    style={{
+                                        width: 60,
+                                        height: 32,
+                                        backgroundColor: displaySettings.imageGenerationEnabled ? '#22c55e' : theme.buttonBg,
+                                        borderRadius: 16, // Round/Pill shape
+                                        borderWidth: 1,
+                                        borderColor: displaySettings.imageGenerationEnabled ? '#22c55e' : theme.border,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        paddingHorizontal: 4,
+                                        justifyContent: displaySettings.imageGenerationEnabled ? 'flex-end' : 'flex-start'
+                                    }}
+                                >
+                                    {displaySettings.imageGenerationEnabled && (
+                                        <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold', marginRight: 6 }}>ON</Text>
+                                    )}
+                                    <View style={{
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: 12, // Circular thumb
+                                        backgroundColor: 'white',
+                                        shadowColor: "#000",
+                                        shadowOffset: { width: 0, height: 1 },
+                                        shadowOpacity: 0.2,
+                                        shadowRadius: 1,
+                                        elevation: 2
+                                    }} />
+                                    {!displaySettings.imageGenerationEnabled && (
+                                        <Text style={{ color: theme.secondary, fontSize: 10, fontWeight: 'bold', marginLeft: 6 }}>OFF</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
                         </>
                     )}
 
