@@ -27048,7 +27048,7 @@ Review the following raw transcribed text:
                     speak(cleanTextForDisplay(text), 0, false, true, "Chatbot", true);
                 }}
                 onSwitchLanguage={switchChatBubbleLanguage}
-                isRecording={isRecording}
+                isRecording={isRecording || isOfflineRecognizing}
                 isTranscribing={isTranscribing}
                 speakingMsgId={chatbotSpeakingMsgId}
                 translatingMsgId={chatbotTranslatingMsgId}
