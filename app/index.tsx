@@ -617,7 +617,7 @@ const LibraryGroupItem = React.memo(({ session, theme, isSelectionMode, selected
                 ) : (
                     <View style={{ width: 44, height: 44, borderRadius: 12, marginRight: 12, backgroundColor: theme.highlight, alignItems: 'center', justifyContent: 'center' }}>
                         {/* Fallback Icon if we don't pass specific one */}
-                        <Bot size={22} color={groupColor} />
+                        <GroupIcon size={22} color={groupColor} />
                     </View>
                 )}
 
@@ -715,7 +715,6 @@ const LibraryGroupItem = React.memo(({ session, theme, isSelectionMode, selected
 }, (prev, next) => {
     // Deep compare relevant props for group
     const prevChildIds = (prev.isStoriesTab ? prev.session.chapters : prev.session.items).map((s: any) => s.id);
-    const nextChildIds = (next.isStoriesTab ? next.session.chapters : next.session.items).map((s: any) => s.id);
 
     // Check if selection changed for any child
     const selectionChanged = prevChildIds.some((id: string) => prev.selectedLibraryIds.includes(id) !== next.selectedLibraryIds.includes(id));
@@ -875,26 +874,29 @@ const SimpleTable: React.FC<SimpleTableProps> = ({
     const scaledFontSize = BASE_FONT_SIZE * fontSize;
     const headerFontSize = 11 * fontSize;
 
-    const parsedRows = rows.map(row => {
-        const content = row.trim().replace(/^\||\|$/g, '');
-        return content.split('|').map(cell => cell.trim());
-    });
+    const { headers, body } = useMemo(() => {
+        const parsedRows = rows.map(row => {
+            const content = row.trim().replace(/^\||\|$/g, '');
+            return content.split('|').map(cell => cell.trim());
+        });
 
-    const dataRows = parsedRows.filter(rowCells => {
-        const str = rowCells.join('');
-        return !/^[\s\-:]+$/.test(str);
-    });
+        const dataRows = parsedRows.filter(rowCells => {
+            const str = rowCells.join('');
+            return !/^[\s\-:]+$/.test(str);
+        });
 
-    let headers: string[] = [];
-    let body: string[][] = [];
+        let h: string[] = [];
+        let b: string[][] = [];
 
-    if (dataRows.length === 1) {
-        headers = dataRows[0].map((_, i) => `Column ${i + 1}`);
-        body = dataRows;
-    } else if (dataRows.length > 1) {
-        headers = dataRows[0];
-        body = dataRows.slice(1);
-    }
+        if (dataRows.length === 1) {
+            h = dataRows[0].map((_, i) => `Column ${i + 1}`);
+            b = dataRows;
+        } else if (dataRows.length > 1) {
+            h = dataRows[0];
+            b = dataRows.slice(1);
+        }
+        return { headers: h, body: b };
+    }, [rows]);
 
     const colWidths = useMemo(() => {
         if (!Array.isArray(headers) || !Array.isArray(body)) return [];
@@ -966,7 +968,7 @@ const SimpleTable: React.FC<SimpleTableProps> = ({
         );
     }
 
-    if (dataRows.length === 0) return null;
+    if (headers.length === 0 && body.length === 0) return null;
 
 
     const renderCellText = (text: string, isHeader: boolean) => {
@@ -1444,6 +1446,7 @@ const ConceptCard: React.FC<any> = ({
             if (onSave) onSave(flashcard);
             Alert.alert("Saved!", "Find it in Library -> Test -> Cards.");
         } catch (error) {
+            console.error("Flashcard save error:", error);
             Alert.alert("Error", "Failed to save flashcard.");
         }
     };
@@ -1512,15 +1515,6 @@ const ConceptCard: React.FC<any> = ({
 
 // --- COMPATIBILITY FIX: Expo SDK 52+ FileSystem Legacy Support ---
 let fs = FileSystem;
-try {
-    const legacy = require('expo-file-system/legacy');
-    if (legacy) {
-        fs = legacy;
-        console.log("Using expo-file-system/legacy for compatibility");
-    }
-} catch (e) {
-    // Module not found, likely on older SDK or standard workflow.
-}
 
 // Ignore Expo AV deprecation warning AND the Keep Awake/Linking warnings
 LogBox.ignoreLogs([
@@ -26152,7 +26146,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
 
 
                     <Text style={{ fontSize: 11, color: '#f97316', marginBottom: 15, fontStyle: 'italic' }}>
-                        Tip: please go to LLM site and search latest model and add latest model in app if you don't receive response after input api key.
+                        Tip: please go to LLM site and search latest model and add latest model in app if you don&apos;t receive response after input api key.
                     </Text>
 
                     {showModelManagement && (
