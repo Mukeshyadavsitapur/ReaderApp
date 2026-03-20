@@ -22986,38 +22986,6 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                     <View style={{ paddingTop: 50, paddingBottom: 20 }}>
                         <ScrollView style={{ paddingHorizontal: 4 }}>
                             <View style={{ gap: 4, paddingVertical: 8 }}>
-                                {/* 0. Custom Features (ADDED ABOVE ALL) */}
-                                {customMenuFeatures.map((feature) => (
-                                    <TouchableOpacity
-                                        key={feature.id}
-                                        onPress={() => {
-                                            toggleSideMenu(false);
-                                            setIsChatbotMode(true);
-                                            handleChatbotCharSelect(feature);
-                                        }}
-                                        onLongPress={() => handleLongPressCustomFeature(feature)}
-                                        style={[styles.menuItem, (selectedScenario?.id === feature.id && isChatbotMode) && { backgroundColor: theme.highlight }]}
-                                    >
-                                        <Sparkles size={20} color={primaryColor} />
-                                        <Text style={[styles.menuItemText, { color: theme.text }]} numberOfLines={1}>{feature.title}</Text>
-                                        <View style={{ backgroundColor: primaryColor + '15', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, marginLeft: 'auto' }}>
-                                            <Text style={{ fontSize: 8, color: primaryColor, fontWeight: 'bold' }}>NEW</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                ))}
-
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        toggleSideMenu(false);
-                                        setNewCharName("");
-                                        setNewCharPrompt("");
-                                        setShowAddMenuFeatureModal(true);
-                                    }}
-                                    style={[styles.menuItem, { opacity: 0.8, borderStyle: 'dashed', borderWidth: 1, borderColor: theme.border, marginBottom: 8 }]}
-                                >
-                                    <Plus size={20} color={theme.secondary} />
-                                    <Text style={[styles.menuItemText, { color: theme.secondary }]}>Generate New Feature</Text>
-                                </TouchableOpacity>
 
                                 {/* 1. New Session */}
                                 <TouchableOpacity
@@ -23031,6 +22999,28 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                     <Plus size={20} color={primaryColor} />
                                     <Text style={[styles.menuItemText, { color: theme.text }]}>New Session</Text>
                                 </TouchableOpacity>
+
+                                {/* Custom Menu Features */}
+                                {customMenuFeatures.map((feature) => (
+                                    <TouchableOpacity
+                                        key={feature.id}
+                                        onPress={() => {
+                                            toggleSideMenu(false);
+                                            setIsChatbotMode(false);
+                                            setSelectedScenario(feature);
+                                            saveSchoolConfig({ input: "", length: "Medium", complexity: "Intermediate", subject: "General" });
+                                            setAppMode('setup');
+                                        }}
+                                        onLongPress={() => handleLongPressCustomFeature(feature)}
+                                        style={[styles.menuItem, (selectedScenario?.id === feature.id && appMode === 'setup') && { backgroundColor: theme.highlight }]}
+                                    >
+                                        <Sparkles size={20} color={primaryColor} />
+                                        <Text style={[styles.menuItemText, { color: theme.text }]} numberOfLines={1}>{feature.title}</Text>
+                                        <View style={{ backgroundColor: primaryColor + '15', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, marginLeft: 'auto' }}>
+                                            <Text style={{ fontSize: 8, color: primaryColor, fontWeight: 'bold' }}>NEW</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
 
                                 {/* 2. Notes */}
                                 <TouchableOpacity
@@ -23143,6 +23133,20 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                 >
                                     <Library size={20} color={primaryColor} />
                                     <Text style={[styles.menuItemText, { color: theme.text }]}>{uiData.staticText?.tabs?.library || "Library"}</Text>
+                                </TouchableOpacity>
+
+                                {/* Generate New Feature */}
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        toggleSideMenu(false);
+                                        setNewCharName("");
+                                        setNewCharPrompt("");
+                                        setShowAddMenuFeatureModal(true);
+                                    }}
+                                    style={[styles.menuItem, { opacity: 0.8, borderStyle: 'dashed', borderWidth: 1, borderColor: theme.border, marginTop: 8 }]}
+                                >
+                                    <Plus size={20} color={theme.secondary} />
+                                    <Text style={[styles.menuItemText, { color: theme.secondary }]}>Generate New Feature</Text>
                                 </TouchableOpacity>
                             </View>
 
@@ -23353,7 +23357,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
         if (editingId) {
             setCustomMenuFeatures(prev => prev.map(f => 
                 f.id === editingId 
-                ? { ...f, title: newCharName.trim(), prompt: newCharPrompt.trim(), greeting: `Hello! I'm your ${newCharName.trim()} assistant. How can I help you?` }
+                ? { ...f, title: newCharName.trim(), prompt: newCharPrompt.trim(), systemPrompt: newCharPrompt.trim(), emoji: '✨', type: 'assistant', greeting: `Hello! I'm your ${newCharName.trim()} assistant. How can I help you?` }
                 : f
             ));
             showToast("Feature updated!");
@@ -23363,7 +23367,10 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                 title: newCharName.trim(),
                 role: 'Custom Feature',
                 prompt: newCharPrompt.trim(),
+                systemPrompt: newCharPrompt.trim(),
                 iconName: 'Sparkles',
+                emoji: '✨',
+                type: 'assistant',
                 color: [primaryColor, primaryColor],
                 greeting: `Hello! I'm your ${newCharName.trim()} assistant. How can I help you?`,
                 isCustom: true
@@ -24935,25 +24942,42 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                     <>
                                         <Text style={{ color: theme.secondary, fontWeight: '700', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>INPUT</Text>
 
-                                        {/* NEW: Unified Search-Bar-Style Input for Quiz */}
-                                        <View style={[styles.searchBar, { backgroundColor: theme.inputBg, borderColor: theme.border, marginBottom: 10 }]}>
-                                            <TextInput
-                                                style={[styles.searchInput, { color: theme.text, marginLeft: 10 }]}
-                                                placeholder={selectedScenario?.placeholder || "Enter topic..."}
-                                                placeholderTextColor={theme.secondary}
-                                                value={schoolConfig.input}
-                                                onChangeText={(text) => setSchoolConfig({ ...schoolConfig, input: text })}
-                                                multiline={true}
-                                            />
-
-                                            {/* Microphone Button */}
-                                            {renderMicButton('setup_input', { marginRight: 4, elevation: 0, shadowOpacity: 0 }, 20)}
-
-                                            {/* Vision Button (for quiz only) */}
-                                            {selectedScenario?.id === 'examiner' && (
+                                        {/* NEW: Unified Search-Bar-Style Input for Setup */}
+                                        <View style={[{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            backgroundColor: theme.id === 'day' ? '#ffffff' : theme.uiBg,
+                                            borderColor: schoolConfig.input.trim().length > 0 ? primaryColor + '40' : theme.border,
+                                            borderWidth: 1.5,
+                                            borderRadius: 30, // Pill shape
+                                            paddingHorizontal: 16,
+                                            paddingVertical: 2,
+                                            width: '100%',
+                                            shadowColor: primaryColor,
+                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOpacity: schoolConfig.input.trim().length > 0 ? 0.1 : 0.05,
+                                            shadowRadius: 10,
+                                            elevation: 6,
+                                            marginBottom: 10
+                                        }]}>
+                                            {/* Vision Button (Plus) on the left */}
+                                            {(selectedScenario?.isCustom || selectedScenario?.id === 'examiner' || selectedScenario?.id === 'writer' || selectedScenario?.id === 'health_guide' || selectedScenario?.id === 'greetings_gen' || selectedScenario?.id === 'work_organizer' || selectedScenario?.id === 'editorial_writer' || selectedScenario?.id === 'teacher' || ['ai_for_everyone', 'grammar_guide', 'idiom_guide', 'ml_tutor', 'prompt_engineer', 'tech_guide', 'ai_usage'].includes(selectedScenario?.id || '')) && (
                                                 <TouchableOpacity
                                                     onPress={() => {
-                                                        setImagePickerMode('quiz');
+                                                        let mode = 'vision';
+                                                        if (selectedScenario?.id === 'examiner') mode = 'quiz';
+                                                        else if (selectedScenario?.isCustom) mode = 'custom';
+                                                        else if (selectedScenario?.id === 'writer') mode = 'writer';
+                                                        else if (selectedScenario?.id === 'health_guide') mode = 'doctor';
+                                                        else if (selectedScenario?.id === 'greetings_gen') mode = 'greetings_gen';
+                                                        else if (selectedScenario?.id === 'work_organizer') mode = 'work_organizer';
+                                                        else if (selectedScenario?.id === 'editorial_writer') mode = 'editorial';
+                                                        else if (selectedScenario?.id === 'teacher') mode = 'teacher';
+                                                        else if (selectedScenario?.id === 'ai_tutor') mode = 'custom';
+                                                        else if (['ai_for_everyone', 'grammar_guide', 'idiom_guide', 'ml_tutor', 'prompt_engineer', 'tech_guide', 'ai_usage'].includes(selectedScenario?.id || '')) mode = 'custom';
+
+                                                        setImagePickerMode(mode);
+                                                        setVisionDraft({ uris: [], prompt: "" });
                                                         setShowImageSourceModal(true);
                                                     }}
                                                     style={{
@@ -24964,24 +24988,37 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                                         marginRight: 4
                                                     }}
                                                 >
-                                                    <Camera size={20} color={theme.text} />
+                                                    <Plus size={26} color={theme.secondary} />
                                                 </TouchableOpacity>
                                             )}
 
-                                            {/* Action Button (Start Quiz / Start) */}
+                                            <TextInput
+                                                style={[{ flex: 1, fontSize: 16, color: theme.text, minHeight: 46 }]}
+                                                placeholder={selectedScenario?.placeholder || "Enter topic..."}
+                                                placeholderTextColor={theme.secondary}
+                                                value={schoolConfig.input}
+                                                onChangeText={(text) => setSchoolConfig({ ...schoolConfig, input: text })}
+                                                multiline={true}
+                                            />
+
+                                            {/* Microphone Button */}
+                                            {renderMicButton('setup_input', { marginLeft: 6, elevation: 0, shadowOpacity: 0 }, 20)}
+
+                                            {/* Action Button (Start) */}
                                             <TouchableOpacity
                                                 onPress={handleStartScenario}
                                                 style={{
                                                     width: 38,
                                                     height: 38,
                                                     alignItems: 'center',
-                                                    justifyContent: 'center'
+                                                    justifyContent: 'center',
+                                                    marginLeft: 4
                                                 }}
                                             >
                                                 {schoolConfig.input.trim().length > 0 ? (
-                                                    <ArrowRight size={20} color={primaryColor} />
+                                                    <ArrowRight size={22} color={primaryColor} />
                                                 ) : (
-                                                    <Sparkles size={20} color={theme.text} />
+                                                    <Sparkles size={22} color={theme.text} />
                                                 )}
                                             </TouchableOpacity>
                                         </View>
