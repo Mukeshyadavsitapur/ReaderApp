@@ -5112,7 +5112,6 @@ LibrarySessionItem.displayName = 'LibrarySessionItem';
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        minHeight: isWeb ? '100vh' : 'auto',
     },
     header: { height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, borderBottomWidth: 1 },
     logoContainer: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
@@ -5152,7 +5151,7 @@ const styles = StyleSheet.create({
     historyItem: { padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 10 },
     historyTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
     footer: {
-        position: isWeb ? 'fixed' : 'absolute',
+        position: (isWeb ? 'fixed' : 'absolute') as any,
         bottom: 0,
         left: 0,
         right: 0,
