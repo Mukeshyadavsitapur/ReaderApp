@@ -4478,8 +4478,8 @@ const styles = StyleSheet.create({
     loadingText: { marginTop: 20, fontSize: 18, fontWeight: 'bold' },
     articleContent: { padding: 20, paddingBottom: 100 },
     // FIXED: Removed fontWeight: 'bold' to allow "zeroing" and user control via Text Style settings
-    articleTitle: { fontSize: 24, marginBottom: 15 },
-    articleText: { fontSize: 18 },
+    articleTitle: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5, marginBottom: 16 },
+    articleText: { fontSize: 16 },
 
     coverImage: { width: '100%', height: 300, borderRadius: 16, marginBottom: 20 }, // Increased height
     quizOption: { padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 10 },
@@ -22158,10 +22158,9 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                     styles.articleText,
                     {
                         color: theme.text,
-                        fontSize: 18 * displaySettings.fontSize,
-                        lineHeight: 30 * displaySettings.fontSize,
-                        textAlign: 'justify',
-                        marginBottom: 15,
+                        fontSize: 16 * displaySettings.fontSize,
+                        lineHeight: 28 * displaySettings.fontSize,
+                        marginBottom: 24,
                         ...getTypographyStyle(displaySettings.fontFamily, displaySettings.textStyles)
                     }
                 ]}

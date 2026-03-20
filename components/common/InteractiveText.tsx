@@ -269,10 +269,10 @@ const InteractiveText = React.memo(({
                 let dynamicTextAlign = 'left';
 
                 if (type === 'header') {
-                    dynamicColor = theme.id === 'night' ? '#60a5fa' : '#2563eb';
+                    dynamicColor = theme.primary;
                     dynamicWeight = 'bold';
-                    dynamicSize *= 1.3;
-                    dynamicMargin = 10;
+                    dynamicSize *= 1.25;
+                    dynamicMargin = 16;
                 } else if (type === 'formula') {
                     dynamicTextAlign = 'center';
                     dynamicStyle = 'italic';
@@ -286,7 +286,7 @@ const InteractiveText = React.memo(({
                 }
 
                 return (
-                    <Text key={key} style={{ marginTop: dynamicMargin, textAlign: dynamicTextAlign as any, width: '100%' }} selectable={!isHighlightMode}>
+                    <Text key={key} style={{ marginTop: dynamicMargin, textAlign: dynamicTextAlign as any, width: '100%', lineHeight: flatStyle.lineHeight }} selectable={!isHighlightMode}>
                         {lineWords && (lineWords as any[]).map(({ word, start, end, isBold, isItalic, isMath, isLink, linkUrl, isGreen }, index) => {
                             if (!word) return null;
                             const globalStart = paragraphOffset + start;
@@ -311,15 +311,16 @@ const InteractiveText = React.memo(({
                             let wordDecor = 'none';
 
                             if (isUrl || isLink) {
-                                wordColor = '#2563eb';
+                                wordColor = theme.primary;
                                 wordDecor = 'underline';
                                 if (isLink) wordWeight = 'bold';
                             } else if (isBold) {
-                                wordColor = theme.id === 'day' ? '#2563eb' : theme.primary;
-                                wordWeight = 'bold';
+                                // NEW: For Gemini style, bold text stays theme color but with primary weight
+                                wordColor = dynamicColor; 
+                                wordWeight = '800'; 
                             } else if (isMath) {
                                 wordColor = theme.id === 'day' ? '#ea580c' : '#fb923c';
-                                wordWeight = '500';
+                                wordWeight = '600';
                             } else if (isGreen) {
                                 wordColor = '#22c55e';
                                 wordWeight = 'bold';
