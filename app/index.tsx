@@ -26002,7 +26002,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                     </View>
                     <View style={{ height: 1, backgroundColor: theme.border, marginBottom: 15 }} />
                     <Text style={{ fontSize: 13, color: theme.secondary, lineHeight: 18, opacity: 0.8 }}>
-                        Change the visual theme, font family, text size, and paragraph styles to suit your reading preference.
+                        Change the visual that suit your reading preference and turn on/off popup dictionary.
                     </Text>
                 </View>
 
@@ -26151,7 +26151,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
 
 
                     <Text style={{ fontSize: 11, color: '#f97316', marginBottom: 15, fontStyle: 'italic' }}>
-                        Tip: please update to latest model if see model not found related error
+                        Tip: please go to LLM site and search latest model and add latest model in app if you don't receive response after input api key.
                     </Text>
 
                     {showModelManagement && (
@@ -26649,8 +26649,8 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                             <DownloadCloud size={20} color={isDay ? theme.primary : '#38bdf8'} />
                         </View>
                         <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text }}>Offline Dictionary</Text>
-                            <Text style={{ fontSize: 12, color: theme.secondary }}>Download for offline use</Text>
+                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text }}>Download From Cloud</Text>
+                            <Text style={{ fontSize: 12, color: theme.secondary }}>Download dictionary for offline use</Text>
                         </View>
                         <ChevronRight size={18} color={theme.secondary} opacity={0.5} />
                     </TouchableOpacity>
@@ -28344,24 +28344,24 @@ Review the following raw transcribed text:
                                                             </View>
                                                         </View>
                                                     </ScrollView>
-                                                </KeyboardAvoidingView>
 
-                                                {/* GEMINI-STYLE: Search bar pinned at bottom of screen */}
-                                                <View style={{
-                                                    position: 'absolute',
-                                                    bottom: 0,
-                                                    left: 0,
-                                                    right: 0,
-                                                    paddingHorizontal: 16,
-                                                    paddingTop: 10,
-                                                    paddingBottom: Platform.OS === 'ios' ? 28 : 14,
-                                                    backgroundColor: theme.bg,
-                                                    borderTopWidth: 1,
-                                                    borderTopColor: theme.id === 'day' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)',
-                                                    zIndex: 150,
-                                                }}>
-                                                    {renderHomeSearchBar()}
-                                                </View>
+                                                    {/* GEMINI-STYLE: Search bar pinned at bottom of screen */}
+                                                    <View style={{
+                                                        position: 'absolute',
+                                                        bottom: 0,
+                                                        left: 0,
+                                                        right: 0,
+                                                        paddingHorizontal: 16,
+                                                        paddingTop: 10,
+                                                        paddingBottom: Platform.OS === 'ios' ? 28 : 14,
+                                                        backgroundColor: theme.bg,
+                                                        borderTopWidth: 1,
+                                                        borderTopColor: theme.id === 'day' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)',
+                                                        zIndex: 150,
+                                                    }}>
+                                                        {renderHomeSearchBar()}
+                                                    </View>
+                                                </KeyboardAvoidingView>
                                             </View>
                                         )}
                                     </View>
