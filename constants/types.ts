@@ -237,8 +237,8 @@ export interface InteractiveTextProps {
     activeSentence?: SpeechRange | null;
     paragraphOffset?: number;
     theme: Theme;
-    isHighlightMode?: boolean;
     highlights?: Highlight[];
+    isHighlightMode?: boolean;
     onHighlightPress?: (highlight: { start: number; end: number; text: string }) => void;
     tapToDefineEnabled?: boolean;
 }

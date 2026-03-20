@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { 
     Mic, 
-    Search, 
     Image as ImageIcon, 
     Paperclip, 
     Sparkles 
@@ -133,6 +132,7 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
 
 const styles = StyleSheet.create({
     scrollContent: {
+        flexGrow: 1,
         padding: 24,
         paddingBottom: 120,
     },

@@ -74,7 +74,6 @@ import {
     Library,
     Lightbulb,
     List,
-    Keyboard as LucideKeyboard,
     Mail,
     Maximize2,
     Megaphone,

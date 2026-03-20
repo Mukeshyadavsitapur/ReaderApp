@@ -15,7 +15,6 @@ import {
     Mic, 
     ArrowRight, 
     X, 
-    Keyboard as LucideKeyboard,
     Volume2,
     Square,
     Lightbulb,
@@ -198,6 +197,7 @@ const GeminiChat: React.FC<GeminiChatProps> = ({
 
 const styles = StyleSheet.create({
     scrollContent: {
+        flexGrow: 1,
         padding: 20,
         paddingBottom: 100,
     },

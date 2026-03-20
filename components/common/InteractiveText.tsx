@@ -65,9 +65,9 @@ const InteractiveText = React.memo(({
     activeSentence, 
     paragraphOffset = 0, 
     theme, 
-    isHighlightMode, 
+    isHighlightMode,
     highlights = [], 
-    onHighlightPress, 
+    onHighlightPress,
     tapToDefineEnabled = true 
 }: InteractiveTextProps) => {
     const flatStyle: any = useMemo(() => StyleSheet.flatten(style) || {}, [style]);
@@ -286,7 +286,7 @@ const InteractiveText = React.memo(({
                 }
 
                 return (
-                    <Text key={key} style={{ marginTop: dynamicMargin, textAlign: dynamicTextAlign as any, width: '100%' }}>
+                    <Text key={key} style={{ marginTop: dynamicMargin, textAlign: dynamicTextAlign as any, width: '100%' }} selectable={!isHighlightMode}>
                         {lineWords && (lineWords as any[]).map(({ word, start, end, isBold, isItalic, isMath, isLink, linkUrl, isGreen }, index) => {
                             if (!word) return null;
                             const globalStart = paragraphOffset + start;
@@ -335,14 +335,35 @@ const InteractiveText = React.memo(({
                                 fontFamily: type === 'formula' ? (Platform.OS === 'ios' ? 'Georgia' : 'serif') : flatStyle.fontFamily,
                             };
 
-                            const isInteractive = (isLink && linkUrl) || isUrl || tapToDefineEnabled;
+                            const isInteractive = isHighlightMode || (isLink && linkUrl) || isUrl || tapToDefineEnabled;
 
                             return (
                                 <Text
                                     key={`${key}-${index}`}
                                     style={wordStyle}
-                                    onPress={isInteractive ? () => {
-                                        if (isLink && linkUrl) {
+                                    onPressIn={(e) => {
+                                        const { pageX, pageY } = e.nativeEvent;
+                                        pressTrackerRef.current = { time: Date.now(), x: pageX, y: pageY };
+                                    }}
+                                    onPress={isInteractive ? (e) => {
+                                        const { pageX, pageY } = e.nativeEvent || {};
+                                        const { time, x, y } = pressTrackerRef.current;
+                                        const duration = Date.now() - time;
+                                        
+                                        if (Platform.OS !== 'web') {
+                                            const dist = Math.sqrt(Math.pow((pageX || 0) - x, 2) + Math.pow((pageY || 0) - y, 2));
+                                            if (duration > 350 || dist > 10) return;
+                                        } else if (time !== 0 && duration > 500) {
+                                            return;
+                                        }
+
+                                        if (isHighlightMode) {
+                                            onHighlightPress && onHighlightPress({
+                                                start: paragraphOffset,
+                                                end: paragraphOffset + totalLength,
+                                                text: "Paragraph Highlight"
+                                            });
+                                        } else if (isLink && linkUrl) {
                                             onLinkPress?.(linkUrl) || Linking.openURL(linkUrl).catch(() => {});
                                         } else if (isUrl) {
                                             Linking.openURL(word.replace(/[.,;)]$/, '')).catch(() => {});
@@ -360,6 +381,33 @@ const InteractiveText = React.memo(({
             })}
         </View>
     );
+}, (prev, next) => {
+    const prevStyle = StyleSheet.flatten(prev.style) || {};
+    const nextStyle = StyleSheet.flatten(next.style) || {};
+
+    if (prev.rawText !== next.rawText ||
+        prev.paragraphOffset !== next.paragraphOffset ||
+        prev.theme.id !== next.theme.id ||
+        prev.isHighlightMode !== next.isHighlightMode ||
+        prev.tapToDefineEnabled !== next.tapToDefineEnabled ||
+        prevStyle.fontSize !== nextStyle.fontSize ||
+        prevStyle.color !== nextStyle.color ||
+        prevStyle.fontStyle !== nextStyle.fontStyle
+    ) return false;
+
+    // Highlights & Active Sentence optimization
+    const pStart = next.paragraphOffset || 0;
+    const pEnd = pStart + next.rawText.length + 50;
+    
+    const sentenceIntersects = (range: any) => range && range.start < pEnd && range.end > pStart;
+    if (sentenceIntersects(prev.activeSentence) !== sentenceIntersects(next.activeSentence)) return false;
+
+    if (prev.highlights !== next.highlights) {
+        const getRelevant = (list: Highlight[]) => list.filter(h => h.start < pEnd && h.end > pStart);
+        if (getRelevant(prev.highlights || []).length !== getRelevant(next.highlights || []).length) return false;
+    }
+
+    return true;
 });
 
 
