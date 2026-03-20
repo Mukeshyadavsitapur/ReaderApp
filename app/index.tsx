@@ -5426,6 +5426,10 @@ export default function App() {
     const [showFullScreenReference, setShowFullScreenReference] = useState(false);
     const [showReferenceText, setShowReferenceText] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
+    const [customChatbotCharacters, setCustomChatbotCharacters] = useState<any[]>([]);
+    const [showAddCharacterModal, setShowAddCharacterModal] = useState(false);
+    const [newCharName, setNewCharName] = useState("");
+    const [newCharPrompt, setNewCharPrompt] = useState("");
     const [isTranscribing, setIsTranscribing] = useState(false);
 
     // NEW: Sharing Lock State to prevent multiple tap crashes
@@ -23210,6 +23214,48 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
         speak(textToSpeak, 0, true, false, null, true); // forceOffline = true
     };
 
+    const handleAddCustomCharacter = () => {
+        if (!newCharName.trim() || !newCharPrompt.trim()) {
+            showToast("Please provide both name and instruction.");
+            return;
+        }
+
+        const newChar = {
+            id: `custom_${Date.now()}`,
+            title: newCharName.trim(),
+            role: 'Custom Character',
+            prompt: newCharPrompt.trim(),
+            iconName: 'User',
+            color: [primaryColor, primaryColor],
+            greeting: `Hello! I'm ${newCharName.trim()}. How can I help you today?`,
+            isCustom: true
+        };
+
+        setCustomChatbotCharacters(prev => [newChar, ...prev]);
+        setNewCharName("");
+        setNewCharPrompt("");
+        setShowAddCharacterModal(false);
+        showToast("Character added successfully!");
+    };
+
+    const handleDeleteCustomCharacter = (char: any) => {
+        Alert.alert(
+            "Delete Character",
+            `Are you sure you want to delete "${char.title}"?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Delete", 
+                    style: "destructive", 
+                    onPress: () => {
+                        setCustomChatbotCharacters(prev => prev.filter(c => c.id !== char.id));
+                        showToast("Character deleted.");
+                    }
+                }
+            ]
+        );
+    };
+
     const renderChatbotHome = () => {
         const isDay = theme.id === 'day';
         
@@ -23263,14 +23309,16 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                         </Text>
                     </View>
 
-                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
                         <View style={{ gap: 8, paddingHorizontal: 16 }}>
-                            {CHATBOT_CHARACTERS.map((char) => {
+                            {/* Unified List: Custom first, then defaults */}
+                            {[...customChatbotCharacters, ...CHATBOT_CHARACTERS].map((char) => {
                                 const IconComponent = ICON_MAP[char.iconName] || Bot;
                                 return (
                                     <TouchableOpacity
                                         key={char.id}
                                         onPress={() => handleChatbotCharSelect(char)}
+                                        onLongPress={() => char.isCustom && handleDeleteCustomCharacter(char)}
                                         activeOpacity={0.7}
                                         style={{
                                             flexDirection: 'row',
@@ -23278,21 +23326,158 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                             paddingVertical: 14,
                                             paddingHorizontal: 16,
                                             borderRadius: 16,
-                                            borderWidth: 0,
+                                            backgroundColor: isDay ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.03)',
                                             gap: 14,
                                         }}
                                     >
-                                        <IconComponent size={24} color={char.color[0]} />
+                                        <View style={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 20,
+                                            backgroundColor: char.color[0] + '15',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <IconComponent size={20} color={char.color[0]} />
+                                        </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text, marginBottom: 2 }}>{char.title}</Text>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text }}>{char.title}</Text>
+                                                {char.isCustom && (
+                                                    <View style={{ backgroundColor: primaryColor + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                                        <Text style={{ fontSize: 9, color: primaryColor, fontWeight: 'bold' }}>CUSTOM</Text>
+                                                    </View>
+                                                )}
+                                            </View>
                                             <Text style={{ fontSize: 12, color: theme.secondary, opacity: 0.7 }} numberOfLines={1}>{char.role}</Text>
                                         </View>
                                         <ChevronRight size={18} color={theme.secondary} opacity={0.3} />
                                     </TouchableOpacity>
                                 );
                             })}
+
+                            {/* Add New Character Button */}
+                            <TouchableOpacity
+                                onPress={() => setShowAddCharacterModal(true)}
+                                activeOpacity={0.7}
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 16,
+                                    paddingHorizontal: 16,
+                                    borderRadius: 16,
+                                    borderWidth: 1,
+                                    borderStyle: 'dashed',
+                                    borderColor: theme.border,
+                                    gap: 14,
+                                    marginTop: 12,
+                                    backgroundColor: isDay ? 'transparent' : 'rgba(255,255,255,0.02)'
+                                }}
+                            >
+                                <View style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 20,
+                                    backgroundColor: theme.uiBg,
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <Plus size={20} color={theme.secondary} />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text }}>Add New Character</Text>
+                                    <Text style={{ fontSize: 12, color: theme.secondary, opacity: 0.7 }}>Create your own specialized AI</Text>
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     </ScrollView>
+
+                    {/* Add Character Modal */}
+                    <Modal
+                        visible={showAddCharacterModal}
+                        animationType="slide"
+                        transparent={true}
+                        onRequestClose={() => setShowAddCharacterModal(false)}
+                    >
+                        <KeyboardAvoidingView 
+                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+                            style={{ flex: 1 }}
+                        >
+                            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+                                <View style={{ 
+                                    backgroundColor: theme.bg, 
+                                    borderTopLeftRadius: 32, 
+                                    borderTopRightRadius: 32, 
+                                    padding: 24,
+                                    paddingBottom: 40,
+                                    maxHeight: '80%'
+                                }}>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                                        <Text style={{ fontSize: 20, fontWeight: '900', color: theme.text }}>New Character</Text>
+                                        <TouchableOpacity onPress={() => setShowAddCharacterModal(false)}>
+                                            <X size={24} color={theme.secondary} />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <Text style={{ fontSize: 13, fontWeight: '600', color: theme.secondary, marginBottom: 8, marginLeft: 4 }}>CHARACTER NAME</Text>
+                                    <TextInput
+                                        style={{
+                                            backgroundColor: theme.uiBg,
+                                            borderRadius: 16,
+                                            padding: 16,
+                                            color: theme.text,
+                                            fontSize: 16,
+                                            marginBottom: 20,
+                                            borderWidth: 1,
+                                            borderColor: theme.border
+                                        }}
+                                        placeholder="e.g. Science Professor"
+                                        placeholderTextColor={theme.secondary + '70'}
+                                        value={newCharName}
+                                        onChangeText={setNewCharName}
+                                    />
+
+                                    <Text style={{ fontSize: 13, fontWeight: '600', color: theme.secondary, marginBottom: 8, marginLeft: 4 }}>SYSTEM INSTRUCTION (PROMPT)</Text>
+                                    <TextInput
+                                        style={{
+                                            backgroundColor: theme.uiBg,
+                                            borderRadius: 16,
+                                            padding: 16,
+                                            color: theme.text,
+                                            fontSize: 15,
+                                            minHeight: 120,
+                                            textAlignVertical: 'top',
+                                            marginBottom: 32,
+                                            borderWidth: 1,
+                                            borderColor: theme.border
+                                        }}
+                                        placeholder="Describe how the AI should behave..."
+                                        placeholderTextColor={theme.secondary + '70'}
+                                        multiline
+                                        value={newCharPrompt}
+                                        onChangeText={setNewCharPrompt}
+                                    />
+
+                                    <TouchableOpacity
+                                        onPress={handleAddCustomCharacter}
+                                        style={{
+                                            backgroundColor: primaryColor,
+                                            borderRadius: 18,
+                                            paddingVertical: 16,
+                                            alignItems: 'center',
+                                            shadowColor: primaryColor,
+                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOpacity: 0.3,
+                                            shadowRadius: 8,
+                                            elevation: 6
+                                        }}
+                                    >
+                                        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>Save Character</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </KeyboardAvoidingView>
+                    </Modal>
                 </View>
             </View>
         );
