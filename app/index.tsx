@@ -4250,15 +4250,27 @@ const InteractiveText = React.memo(({ rawText, onWordPress, onLinkPress, style, 
                                         pressTrackerRef.current = { time: Date.now(), x: pageX, y: pageY };
                                     }}
                                     onPress={isInteractive ? (e) => {
-                                        const { pageX, pageY } = e.nativeEvent;
+                                        const { pageX, pageY } = e.nativeEvent || {}; 
                                         const { time, x, y } = pressTrackerRef.current;
+                                        const isWeb = Platform.OS === 'web';
 
                                         const duration = Date.now() - time;
-                                        const dist = Math.sqrt(Math.pow(pageX - x, 2) + Math.pow(pageY - y, 2));
-
-                                        // Ignore if long press (>350ms) OR moved significantly (>10px) (Drag/Selection)
-                                        if (duration > 350 || dist > 10) {
-                                            return;
+                                        
+                                        // On Web, coordinate tracking results (pageX/pageY) can be less reliable on Text elements 
+                                        // especially when selectable is true. We relax the check for Web.
+                                        if (isWeb) {
+                                            // Only ignore if we have a valid start time AND it's clearly a long press (>500ms)
+                                            // If time is 0, it means onPressIn didn't fire (common on web selection), 
+                                            // we allow the tap anyway.
+                                            if (time !== 0 && duration > 500) {
+                                                return;
+                                            }
+                                        } else {
+                                            const dist = Math.sqrt(Math.pow((pageX || 0) - x, 2) + Math.pow((pageY || 0) - y, 2));
+                                            // Ignore if long press (>350ms) OR moved significantly (>10px) (Drag/Selection)
+                                            if (duration > 350 || dist > 10) {
+                                                return;
+                                            }
                                         }
 
                                         if (isHighlightMode) {
@@ -4297,7 +4309,7 @@ const InteractiveText = React.memo(({ rawText, onWordPress, onLinkPress, style, 
     if (prev.rawText !== next.rawText ||
         prev.paragraphOffset !== next.paragraphOffset ||
         prev.theme.id !== next.theme.id ||
-        prev.theme.text !== next.theme.text || // NEW: Explicitly check for theme text color change
+        prev.theme.text !== next.theme.text || 
         prev.theme.bg !== next.theme.bg ||     // NEW: Check for background changes
         prev.isHighlightMode !== next.isHighlightMode ||
         prev.tapToDefineEnabled !== next.tapToDefineEnabled ||
@@ -22910,12 +22922,12 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                         onRequestClose={() => setIsReaderMenuVisible(false)}
                     >
                         <TouchableOpacity
-                            style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 60, paddingRight: 20 }}
+                            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 60, paddingRight: 20 }}
                             activeOpacity={1}
                             onPress={() => setIsReaderMenuVisible(false)}
                         >
                              <View style={{
-                                 backgroundColor: theme.bg,
+                                 backgroundColor: theme.uiBg,
                                  width: 220,
                                  borderRadius: 20,
                                  padding: 8,
