@@ -6,7 +6,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+        {/* PWA Full-Height Fix: ensure app fills the entire screen without blank space at bottom */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          html, body, #root { height: 100%; margin: 0; padding: 0; }
+          body { overflow: hidden; }
+        ` }} />
         
         {/* PWA Manifest */}
         <link rel="manifest" href="/manifest.json" />

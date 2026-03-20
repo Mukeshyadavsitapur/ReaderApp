@@ -5863,6 +5863,12 @@ export default function App() {
     const [allSessionIds, setAllSessionIds] = useState<string[]>([]);
     const [loadedSessionCount, setLoadedSessionCount] = useState(50);
 
+    // LAZY LOAD REFS: Track full session index and current page for scroll-triggered loading
+    const sessionIndexRef = useRef<string[]>([]); // Full sorted list of all session IDs
+    const libraryLoadedRef = useRef(false);         // Whether the first page has been loaded
+    const libraryIsLoadingMoreRef = useRef(false);  // Guard against concurrent page fetches
+    const LIBRARY_PAGE_SIZE = 20;                   // Items to load per scroll page
+
     useEffect(() => {
         // Build O(1) lookup set when savedWords changes
         const m = new Set<string>();
@@ -7965,6 +7971,13 @@ export default function App() {
 
         return () => backHandler.remove();
     }, [activeTab, questionsViewMode]);
+
+    // LAZY LOAD: Trigger loading when user first opens the Library tab
+    useEffect(() => {
+        if (activeTab === 'library' && !libraryLoadedRef.current) {
+            loadLibraryPage(true);
+        }
+    }, [activeTab]);
 
     const filteredNotes = useMemo((): any[] => {
         return Object.values(chatSessions || {})
@@ -10174,163 +10187,93 @@ export default function App() {
                     await saveRecentSearchesToFile(defaultRecents);
                 }
 
-                let legacySessions: Record<string, any> = {};
-                try {
-                    const legacy = await AsyncStorage.getItem('chatSessions');
-                    if (legacy) {
-                        legacySessions = JSON.parse(legacy);
-                        const keys = Object.keys(legacySessions);
-                        const pairs = keys.map(id => [`session_${id}`, JSON.stringify(legacySessions[id])]);
-                        await safeMultiSet(pairs as [string, string][]);
-
-                        const existingIndexJson = await AsyncStorage.getItem('session_index');
-                        let existingIndex = existingIndexJson ? JSON.parse(existingIndexJson) : [];
-                        const newIndex: any[] = [...new Set([...existingIndex, ...keys])];
-                        await AsyncStorage.setItem('session_index', JSON.stringify(newIndex));
-
-                        await AsyncStorage.removeItem('chatSessions');
-                        console.log("Migration successful: chatSessions split into individual keys.");
-
-                        // CLEAR LEGACY FROM MEMORY: Force reload via split logic to respect pagination
-                        legacySessions = {};
-                    }
-                } catch (legacyError) {
-                    console.error("Legacy Migration Failed (likely Row too big):", legacyError);
-                    Alert.alert("Data Error", "Could not migrate old data. It may be too large.");
+                // =============================================
+                // PHASE 1 COMPLETE: Settings loaded.
+                // Dismiss the loading screen NOW so the user can use the app.
+                // All remaining heavy work (dictionary, history) runs in background.
+                // =============================================
+                if (!isCancelled) {
+                    clearTimeout(safetyTimeout);
+                    setIsSettingsLoaded(true);
                 }
 
-                let splitSessions: Record<string, any> = {};
-                const corruptKeys: string[] = []; // NEW: Track bad keys
-                let metaLoaded = false;
-                try {
+                // =============================================
+                // PHASE 2: Background work (does NOT block UI)
+                // =============================================
+                (async () => {
+                    // --- BACKGROUND: LEGACY SESSION MIGRATION ---
                     try {
-                        // STRATEGY: Monolithic Metadata Index (Dictionary Style)
-                        // Goal: <1s load time for 1000 items.
-                        // We try to load a single JSON file containing ALL session metadata.
+                        const legacy = await AsyncStorage.getItem('chatSessions');
+                        if (legacy) {
+                            const legacySessions = JSON.parse(legacy);
+                            const keys = Object.keys(legacySessions);
+                            const pairs = keys.map(id => [`session_${id}`, JSON.stringify(legacySessions[id])]);
+                            await safeMultiSet(pairs as [string, string][]);
 
+                            const existingIndexJson = await AsyncStorage.getItem('session_index');
+                            const existingIndex = existingIndexJson ? JSON.parse(existingIndexJson) : [];
+                            const newIndex: any[] = [...new Set([...existingIndex, ...keys])];
+                            await AsyncStorage.setItem('session_index', JSON.stringify(newIndex));
+                            await AsyncStorage.removeItem('chatSessions');
+                            console.log('✅ Legacy migration done.');
+                        }
+                    } catch (legacyError) {
+                        console.error('Legacy Migration Failed:', legacyError);
+                    }
+
+                    // --- BACKGROUND: BUILD SESSION INDEX REF (no UI rendering yet) ---
+                    // Load the sorted list of IDs so we can paginate on-demand later
+                    try {
                         const metaIndexJson = await AsyncStorage.getItem('library_metadata_index');
                         if (metaIndexJson) {
                             const metaMap = JSON.parse(metaIndexJson);
-                            // VALIDATION: Ensure it's a map/object
                             if (metaMap && typeof metaMap === 'object' && !Array.isArray(metaMap)) {
-
-                                // NEW: Verify Index Integrity (Fix for "Ghost" Data)
-                                // If we have a session_index, check if counts match roughly.
-                                // If metadata is missing items that exist in session_index, we MUST rebuild.
                                 const masterIndexJson = await AsyncStorage.getItem('session_index');
                                 const masterIndex = masterIndexJson ? JSON.parse(masterIndexJson) : [];
                                 const metaKeys = Object.keys(metaMap);
 
-                                // Tolerance: If we have significantly more items in master than metadata, assume stale.
-                                // (Master might have 105, Meta 100 - acceptable if 5 were just deleted?) 
-                                // Actually, NO. Master is truth. If Master > Meta, we are missing data in UI.
                                 if (masterIndex.length > metaKeys.length) {
-                                    console.log(`⚠️ Index Desync Detected: Master (${masterIndex.length}) > Meta (${metaKeys.length}). Forcing Rebuild.`);
-                                    // Throw error to trigger catch block -> fallback crawl
-                                    throw new Error("Index Desync");
+                                    // Index is stale — will rebuild on next library open
+                                    console.log('⚠️ Index desync, will rebuild on library open.');
+                                    // Just use master ordering
+                                    sessionIndexRef.current = [...masterIndex].reverse();
+                                } else {
+                                    // Fast path: sort by recency
+                                    const sortedIds = metaKeys.sort((a, b) => {
+                                        const ta = metaMap[a].lastOpened || metaMap[a].timestamp || '';
+                                        const tb = metaMap[b].lastOpened || metaMap[b].timestamp || '';
+                                        return new Date(tb).getTime() - new Date(ta).getTime();
+                                    });
+                                    sessionIndexRef.current = sortedIds;
+                                    console.log(`✅ Session index ready: ${sortedIds.length} items (deferred load).`);
                                 }
-
-                                console.log("⚡ Instant Load: Loaded library from metadata index.");
-                                const ids = metaKeys;
-                                // Sort by recent first (Ids are chronological or timestamps are separate)
-                                // We can use the 'lastOpened' or 'timestamp' from metadata to sort accurately
-                                ids.sort((a, b) => {
-                                    const ta = metaMap[a].lastOpened || metaMap[a].timestamp;
-                                    const tb = metaMap[b].lastOpened || metaMap[b].timestamp;
-                                    return new Date(tb).getTime() - new Date(ta).getTime();
-                                });
-
-                                setAllSessionIds(ids);
-                                setChatSessions(metaMap);
-                                setLoadedSessionCount(ids.length);
-                                metaLoaded = true;
                             }
-                        }
-
-                        // FALLBACK / MIGRATION: No Index Found (First run or post-restore)
-                        // We must crawl all individual keys to build the index.
-                    } catch (metaCheckError) {
-                        console.log("⚠️ Metadata Index check failed (Desync/Error). Proceeding to crawl...", metaCheckError);
-                    }
-
-                    if (!metaLoaded) {
-                        // FALLBACK / MIGRATION: No Index Found (First run or post-restore)
-                        // We must crawl all individual keys to build the index.
-                        console.log("Starting migration crawl...");
-                        try {
+                        } else {
+                            // No metadata index — populate from session_index master list
                             const indexJson = await AsyncStorage.getItem('session_index');
                             if (indexJson) {
                                 const ids = JSON.parse(indexJson);
                                 if (Array.isArray(ids)) {
-                                    // Reverse to prioritize newest, but we will load ALL eventually
-                                    const reversedIds = [...ids].reverse();
-                                    setAllSessionIds(reversedIds);
-
-                                    // Crawler Config
-                                    const BATCH_SIZE = 12; // Keep safe for Android CursorWindow
-                                    let fullMetadataMap: Record<string, any> = {};
-
-                                    console.log(`Crawl Started: Index contains ${reversedIds.length} items. Fetching in batches...`);
-
-                                    for (let i = 0; i < reversedIds.length; i += BATCH_SIZE) {
-                                        const batchIds = reversedIds.slice(i, i + BATCH_SIZE);
-                                        const batchKeys = batchIds.map(id => `session_${id}`);
-
-                                        try {
-                                            const chunks = await AsyncStorage.multiGet(batchKeys);
-                                            let batchSuccessCount = 0;
-                                            chunks.forEach(([key, value]) => {
-                                                if (value) {
-                                                    try {
-                                                        const id = key.replace('session_', '');
-                                                        const liteSession = parseSessionLite(value);
-                                                        if (liteSession) {
-                                                            fullMetadataMap[id] = liteSession;
-                                                            batchSuccessCount++;
-                                                        }
-                                                    } catch (parseError) {
-                                                        console.error(`Corrupt session JSON for key ${key}:`, parseError);
-                                                    }
-                                                }
-                                            });
-                                            // console.log(`Batch ${i} loaded: ${batchSuccessCount} items.`);
-
-                                            // Incremental Update (Visual Progress)
-                                            setChatSessions((prev: any) => ({ ...prev, ...fullMetadataMap }));
-
-                                            // Yield to UI
-                                            await new Promise(resolve => setTimeout(resolve, 10));
-
-                                        } catch (batchError) {
-                                            console.error("Error loading batch:", batchError);
-                                        }
-                                    }
-
-                                    // FINISH: Save the newly built index for next time
-                                    if (Object.keys(fullMetadataMap).length > 0) {
-                                        await AsyncStorage.setItem('library_metadata_index', JSON.stringify(fullMetadataMap));
-                                        console.log("✅ Migration Complete: Saved NEW library_metadata_index.");
-                                    } else {
-                                        console.warn("⚠️ Migration finished but no items loaded. Index might be empty.");
-                                    }
-                                    setLoadedSessionCount(reversedIds.length);
+                                    sessionIndexRef.current = [...ids].reverse();
+                                    console.log(`✅ Session index (raw) ready: ${sessionIndexRef.current.length} items.`);
                                 }
                             }
-                        } catch (crawlError) {
-                            console.error("Crawl logic failed:", crawlError);
                         }
+                    } catch (idxErr) {
+                        console.error('Session index prefetch failed:', idxErr);
                     }
 
-                } catch (e) {
-                    console.error("General Load Error:", e);
-                    Alert.alert("Load Error", "There was an issue loading your data.");
-                }
+                    // --- BACKGROUND: DICTIONARY MIGRATION & LOADING ---
+
+                })(); // end background IIFE — does not block UI
+
             } catch (err) {
-                console.error("Critical Data Load Error:", err);
-            }
-            if (!isCancelled) {
-                clearTimeout(safetyTimeout);
-                setIsSettingsLoaded(true);
+                console.error('Critical Data Load Error:', err);
+                // Even on error, dismiss loading screen
+                if (!isCancelled) {
+                    clearTimeout(safetyTimeout);
+                    setIsSettingsLoaded(true);
+                }
             }
         };
         loadData();
@@ -10341,7 +10284,104 @@ export default function App() {
         };
     }, []);
 
-    // Pagination Removed: loadMoreSessions & loadMoreLibrary deleted.
+
+    // =============================================
+    // ON-DEMAND LIBRARY LOADING (Gemini-style scroll pagination)
+    // loadLibraryPage is called when:
+    //   1. User first navigates to the Library tab
+    //   2. User scrolls near the bottom of the Library FlatList (onEndReached)
+    // It loads sessions in batches from the pre-built sessionIndexRef.
+    // =============================================
+    const loadLibraryPage = async (isFirstPage = false) => {
+        if (libraryIsLoadingMoreRef.current) return; // Prevent concurrent calls
+        if (sessionIndexRef.current.length === 0) {
+            // Index not ready yet — wait a moment and rebuild if needed
+            try {
+                const metaIndexJson = await AsyncStorage.getItem('library_metadata_index');
+                if (metaIndexJson) {
+                    const metaMap = JSON.parse(metaIndexJson);
+                    if (metaMap && typeof metaMap === 'object' && !Array.isArray(metaMap)) {
+                        const sortedIds = Object.keys(metaMap).sort((a, b) => {
+                            const ta = metaMap[a].lastOpened || metaMap[a].timestamp || '';
+                            const tb = metaMap[b].lastOpened || metaMap[b].timestamp || '';
+                            return new Date(tb).getTime() - new Date(ta).getTime();
+                        });
+                        sessionIndexRef.current = sortedIds;
+                        // Populate chatSessions with metadata immediately
+                        setChatSessions(metaMap);
+                        setLoadedSessionCount(sortedIds.length);
+                        libraryLoadedRef.current = true;
+                        return;
+                    }
+                }
+                // No metadata index — try session_index and rebuild
+                const indexJson = await AsyncStorage.getItem('session_index');
+                if (indexJson) {
+                    const ids = JSON.parse(indexJson);
+                    if (Array.isArray(ids)) {
+                        sessionIndexRef.current = [...ids].reverse();
+                    }
+                }
+            } catch (e) {
+                console.error('loadLibraryPage: Index build failed', e);
+                return;
+            }
+        }
+
+        if (sessionIndexRef.current.length === 0) return; // Still empty, nothing to load
+
+        libraryIsLoadingMoreRef.current = true;
+        const alreadyLoaded = isFirstPage ? 0 : Object.keys(chatSessions).length;
+        const nextIds = sessionIndexRef.current.slice(alreadyLoaded, alreadyLoaded + LIBRARY_PAGE_SIZE);
+
+        if (nextIds.length === 0) {
+            libraryIsLoadingMoreRef.current = false;
+            return; // All loaded
+        }
+
+        try {
+            const BATCH_SIZE = 12;
+            const newSessions: Record<string, any> = {};
+
+            for (let i = 0; i < nextIds.length; i += BATCH_SIZE) {
+                const batch = nextIds.slice(i, i + BATCH_SIZE);
+                const keys = batch.map(id => `session_${id}`);
+                try {
+                    const chunks = await AsyncStorage.multiGet(keys);
+                    chunks.forEach(([key, value]) => {
+                        if (value) {
+                            try {
+                                const id = key.replace('session_', '');
+                                const lite = parseSessionLite(value);
+                                if (lite) newSessions[id] = lite;
+                            } catch { /* skip corrupt */ }
+                        }
+                    });
+                    // Yield to UI between batches
+                    await new Promise(resolve => setTimeout(resolve, 5));
+                } catch (batchErr) {
+                    console.error('Library batch load error:', batchErr);
+                }
+            }
+
+            if (Object.keys(newSessions).length > 0) {
+                setChatSessions((prev: any) => ({ ...prev, ...newSessions }));
+                // Save metadata index if this was a first-time crawl (no prior index)
+                const metaExists = await AsyncStorage.getItem('library_metadata_index');
+                if (!metaExists) {
+                    const allLoaded = { ...(chatSessions || {}), ...newSessions };
+                    await AsyncStorage.setItem('library_metadata_index', JSON.stringify(allLoaded));
+                }
+            }
+            libraryLoadedRef.current = true;
+        } catch (e) {
+            console.error('loadLibraryPage error:', e);
+        } finally {
+            libraryIsLoadingMoreRef.current = false;
+        }
+    };
+
+
 
 
 
@@ -28207,7 +28247,7 @@ Review the following raw transcribed text:
     return (
         <SafeAreaProvider>
             <SafeAreaView style={{ flex: 0, backgroundColor: headerBg }} edges={['top', 'left', 'right']} />
-            <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['left', 'right']}>
+            <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['left', 'right', 'bottom']}>
                 <StatusBar
                     barStyle={activeStatusBarStyle}
                 />
@@ -28581,7 +28621,10 @@ Review the following raw transcribed text:
                                                         </View>
                                                     }
                                                     renderItem={renderLibraryItem}
+                                                    onEndReached={() => loadLibraryPage(false)}
+                                                    onEndReachedThreshold={0.3}
                                                 />
+
                                             ) : libraryTab === 'stories' ? (
                                                 <FlatList
                                                     key={isLandscape ? 'lib_land_stories' : 'lib_port_stories'} // Force remount on orientation change
