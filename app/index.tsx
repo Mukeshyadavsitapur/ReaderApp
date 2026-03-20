@@ -6045,6 +6045,21 @@ export default function App() {
     // NEW: Adjustable Silence Timeout
     const [silenceTimeoutMs, setSilenceTimeoutMs] = useState<number>(3000);
     const [showSilencePicker, setShowSilencePicker] = useState<boolean>(false);
+    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+    useEffect(() => {
+        const showSubscription = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => {
+            setIsKeyboardVisible(true);
+        });
+        const hideSubscription = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => {
+            setIsKeyboardVisible(false);
+        });
+
+        return () => {
+            showSubscription.remove();
+            hideSubscription.remove();
+        };
+    }, []);
 
     useEffect(() => {
         liveChatbotSettingsRef.current = { isLiveChatbotMode, silenceTimeoutMs };
@@ -14063,7 +14078,36 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
 
     // NEW: Voice Input Handler
     const handleVoiceToggle = async (target: string = 'search') => {
+        // FIXED: Removed auto-focus to prevent unnecessary keyboard opening as per user feedback.
+        // The text will still be input into the correct box via state management.
         Keyboard.dismiss();
+
+        const applyVoiceText = (currentTarget: string, text: string) => {
+            if (!text) return;
+            const newText = text.trim();
+            if (!newText) return;
+            
+            if (currentTarget === 'note_title') setCurrentNoteTitle((prev: any) => (prev ? prev + " " : "") + newText);
+            else if (currentTarget === 'note_prompt') setCustomNotePrompt((prev: any) => (prev ? prev + " " : "") + newText);
+            else if (currentTarget === 'note_body') setCurrentNoteInput((prev: any) => (prev ? prev + " " : "") + newText);
+            else if (currentTarget === 'story_title') setBookParams((prev: any) => ({ ...prev, title: (prev.title ? prev.title + " " : "") + newText }));
+            else if (currentTarget === 'story_chapter') setBookParams((prev: any) => ({ ...prev, chapter: (prev.chapter ? prev.chapter + " " : "") + newText }));
+            else if (currentTarget === 'story_description') setBookParams((prev: any) => ({ ...prev, description: (prev.description ? prev.description + " " : "") + newText }));
+            else if (currentTarget === 'story_query') setStoryQuery((prev: any) => (prev ? prev + " " : "") + newText);
+            else if (currentTarget === 'story_next') setNextChapterInput((prev: any) => (prev ? prev + " " : "") + newText);
+            else if (currentTarget === 'prompt_label') setNewPromptData((prev: any) => ({ ...prev, label: (prev.label ? prev.label + " " : "") + newText }));
+            else if (currentTarget === 'prompt_content') setNewPromptData((prev: any) => ({ ...prev, prompt: (prev.prompt ? prev.prompt + " " : "") + newText }));
+            else if (currentTarget === 'role_title') setNewRoleData((prev: any) => ({ ...prev, title: (prev.title ? prev.title + " " : "") + newText }));
+            else if (currentTarget === 'role_instructions') setNewRoleData((prev: any) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + " " : "") + newText }));
+            else if (currentTarget === 'dictionary') setDictionaryInput((prev: any) => (prev ? prev + " " : "") + newText);
+            else if (currentTarget === 'library_search') setLibrarySearchQuery((prev: any) => (prev ? prev + " " : "") + newText);
+            else if (currentTarget === 'notes_search') setNoteSearchQuery((prev: any) => (prev ? prev + " " : "") + newText);
+            else if (currentTarget === 'setup_input') setSchoolConfig((prev: any) => ({ ...prev, input: (prev.input ? prev.input + " " : "") + newText }));
+            else if (currentTarget === 'vision_prompt') setVisionDraft((prev: any) => ({ ...prev, prompt: (prev.prompt ? prev.prompt + " " : "") + newText }));
+            else if (currentTarget === 'editorial_topic') setEditorialParams((prev: any) => ({ ...prev, topic: (prev.topic ? prev.topic + " " : "") + newText }));
+            else setQuickSearchQuery((prev: any) => (prev ? prev + " " : "") + newText); // Default for 'search' etc.
+        };
+
         const geminiKey = customApiKey || apiKey;
         const groqKey = displaySettings.groqApiKey;
         const provider = displaySettings.llmProvider || 'gemini';
@@ -14080,13 +14124,8 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                 try {
                     const text = await getOfflineSTT();
                     if (text) {
-                        const newText = text.trim();
-                        // Update UI targets (extracted to shared logic below if needed, but for now inline)
-                        if (voiceTarget === 'search') setQuickSearchQuery((prev: any) => (prev ? prev + " " : "") + newText);
-                        else if (voiceTarget === 'note_title') setCurrentNoteTitle((prev: any) => (prev ? prev + " " : "") + newText);
-                        else if (voiceTarget === 'note_prompt') setCustomNotePrompt((prev: any) => (prev ? prev + " " : "") + newText);
-                        else if (voiceTarget === 'note_body') setCurrentNoteInput((prev: any) => (prev ? prev + " " : "") + newText);
-                        // ... other targets ... (I will keep the existing update targets logic)
+                        // FIXED: Use the 'target' parameter directly instead of 'voiceTarget' state to avoid stale state issues.
+                        applyVoiceText(target, text);
                     }
                 } catch (e) {
                     console.warn("Offline STT failed", e);
@@ -14170,26 +14209,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                         }
 
                         if (text) {
-                            const newText = text.trim();
-                            const target = voiceTarget;
-                            if (target === 'note_title') setCurrentNoteTitle((prev: any) => (prev ? prev + " " : "") + newText);
-                            else if (target === 'note_prompt') setCustomNotePrompt((prev: any) => (prev ? prev + " " : "") + newText);
-                            else if (target === 'note_body') setCurrentNoteInput((prev: any) => (prev ? prev + " " : "") + newText);
-                            else if (target === 'story_title') setBookParams((prev: any) => ({ ...prev, title: (prev.title ? prev.title + " " : "") + newText }));
-                            else if (target === 'story_chapter') setBookParams((prev: any) => ({ ...prev, chapter: (prev.chapter ? prev.chapter + " " : "") + newText }));
-                            else if (target === 'story_description') setBookParams((prev: any) => ({ ...prev, description: (prev.description ? prev.description + " " : "") + newText }));
-                            else if (target === 'story_query') setStoryQuery((prev: any) => (prev ? prev + " " : "") + newText);
-                            else if (target === 'story_next') setNextChapterInput((prev: any) => (prev ? prev + " " : "") + newText);
-                            else if (target === 'prompt_label') setNewPromptData((prev: any) => ({ ...prev, label: (prev.label ? prev.label + " " : "") + newText }));
-                            else if (target === 'prompt_content') setNewPromptData((prev: any) => ({ ...prev, prompt: (prev.prompt ? prev.prompt + " " : "") + newText }));
-                            else if (target === 'role_title') setNewRoleData((prev: any) => ({ ...prev, title: (prev.title ? prev.title + " " : "") + newText }));
-                            else if (target === 'role_instructions') setNewRoleData((prev: any) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + " " : "") + newText }));
-                            else if (target === 'dictionary') setDictionaryInput((prev: any) => (prev ? prev + " " : "") + newText);
-                            else if (target === 'library_search') setLibrarySearchQuery((prev: any) => (prev ? prev + " " : "") + newText);
-                            else if (target === 'notes_search') setNoteSearchQuery((prev: any) => (prev ? prev + " " : "") + newText);
-                            else if (target === 'setup_input') setSchoolConfig((prev: any) => ({ ...prev, input: (prev.input ? prev.input + " " : "") + newText }));
-                            else if (target === 'vision_prompt') setVisionDraft((prev: any) => ({ ...prev, prompt: (prev.prompt ? prev.prompt + " " : "") + newText }));
-                            else setQuickSearchQuery((prev: any) => (prev ? prev + " " : "") + newText);
+                            applyVoiceText(voiceTarget, text);
                         }
                     }
                 }
@@ -14201,7 +14221,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                     showToast("⚠️ Online limit reached. Switching to Offline.");
                     const offlineText = await getOfflineSTT();
                     if (offlineText) {
-                        // Logic to append offlineText to target... (I will handle this by repeating the target logic if needed)
+                        applyVoiceText(voiceTarget, offlineText);
                     }
                 } else {
                     Alert.alert("Error", "Failed to process audio.");
@@ -27934,23 +27954,22 @@ Review the following raw transcribed text:
     // NEW: Unified Search Bar (AI + Library)
     const renderHomeSearchBar = () => (
         <View style={{ zIndex: 100, width: '100%', marginBottom: 15 }}>
-            <View style={[styles.searchBar, { backgroundColor: theme.inputBg, borderColor: theme.border, marginBottom: 0 }]}>
-                {/* UNIFIED SEARCH: Toggle Button Removed. Logic defaults to AI, but shows suggestions for Library. */}
-
-                <TextInput
-                    style={[styles.searchInput, { color: theme.text, marginLeft: 10 }]} // Added marginLeft since button is gone
-                    // FIXED: Unified Placeholder
-                    placeholder={uiData.staticText?.home?.searchOnline || "Search library or ask AI..."}
-                    placeholderTextColor={theme.secondary}
-                    value={quickSearchQuery}
-                    onChangeText={setQuickSearchQuery}
-                    multiline={true}
-                />
-
-
-                {renderMicButton('search', { marginRight: 4 }, 20)}
-
-                {/* NEW: Vision Camera Button */}
+            <View style={[{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: theme.id === 'day' ? '#ffffff' : theme.uiBg,
+                borderColor: theme.border,
+                borderWidth: 1,
+                borderRadius: 30, // Pill shape
+                paddingHorizontal: 16,
+                paddingVertical: 5,
+                width: '100%',
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                elevation: 4
+            }]}>
                 <TouchableOpacity
                     onPress={() => {
                         setImagePickerMode('vision');
@@ -27965,16 +27984,28 @@ Review the following raw transcribed text:
                         marginRight: 4
                     }}
                 >
-                    <Camera size={20} color={theme.text} />
+                    <Plus size={26} color={theme.secondary} />
                 </TouchableOpacity>
+
+                <TextInput
+                    style={[{ flex: 1, fontSize: 16, color: theme.text, minHeight: 46 }]}
+                    placeholder={uiData.staticText?.home?.searchOnline || "Ask anything..."}
+                    placeholderTextColor={theme.secondary}
+                    value={quickSearchQuery}
+                    onChangeText={setQuickSearchQuery}
+                    multiline={true}
+                />
+
+                {renderMicButton('search', { marginLeft: 6 }, 20)}
 
                 <TouchableOpacity onPress={() => handleQuickSearch()} style={{
                     width: 38,
                     height: 38,
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    marginLeft: 4
                 }}>
-                    {quickSearchQuery.trim().length > 0 ? (<ArrowRight size={20} color={primaryColor} />) : (<Search size={20} color={theme.text} />)}
+                    {quickSearchQuery.trim().length > 0 ? (<ArrowRight size={22} color={primaryColor} />) : (<Search size={22} color={theme.text} />)}
                 </TouchableOpacity>
             </View>
 
@@ -28005,7 +28036,6 @@ Review the following raw transcribed text:
                                 key={idx}
                                 onPress={() => {
                                     setQuickSearchQuery("");
-                                    Keyboard.dismiss();
                                     loadHistorySession(session);
                                 }}
                                 style={{
@@ -28147,22 +28177,25 @@ Review the following raw transcribed text:
                                                     >
                                                         {/* GEMINI-STYLE: Greeting at top of scrollable area */}
                                                         {!isLandscape && (
-                                                            <View style={[
-                                                                styles.welcomeSection,
-                                                                { marginTop: 10, marginBottom: 28, paddingHorizontal: 4 }
-                                                            ]}>
-                                                                <Text style={[styles.welcomeTitle, { color: theme.text }]}>
-                                                                    {uiData.staticText?.home?.welcome || "Hello, Friend!"}
+                                                            <View style={[{
+                                                                marginTop: 40, 
+                                                                marginBottom: 40, 
+                                                                paddingHorizontal: 20,
+                                                                alignItems: 'flex-start'
+                                                            }]}>
+                                                                <Text style={[{ 
+                                                                    fontSize: 34, 
+                                                                    fontWeight: '800', 
+                                                                    color: theme.id === 'day' ? '#cfcfcf' : theme.secondary
+                                                                }]}>
+                                                                    {uiData.staticText?.home?.welcome || "Hello,"}
                                                                 </Text>
-                                                                <Text style={[styles.welcomeSub, { color: theme.secondary }]}>
-                                                                    {uiData.staticText?.home?.subtitle || "What shall we learn today?"}
-                                                                    {' '}
-                                                                    <Text
-                                                                        onPress={cycleGlobalLanguage}
-                                                                        style={{ color: primaryColor, fontWeight: 'bold', textDecorationLine: 'underline' }}
-                                                                    >
-                                                                        {displaySettings.language}
-                                                                    </Text>
+                                                                <Text style={[{ 
+                                                                    fontSize: 34, 
+                                                                    fontWeight: '800', 
+                                                                    color: theme.id === 'day' ? '#333333' : theme.text
+                                                                }]}>
+                                                                    {uiData.staticText?.home?.subtitle || "How can I help you today?"}
                                                                 </Text>
                                                             </View>
                                                         )}
@@ -28212,13 +28245,8 @@ Review the following raw transcribed text:
                                                                     };
 
                                                                     return (
-                                                                        <View style={{ marginBottom: 10 }}>
-                                                                            <ScrollView
-                                                                                style={{ maxHeight: 380 }}
-                                                                                nestedScrollEnabled={true}
-                                                                                showsVerticalScrollIndicator={false}
-                                                                                contentContainerStyle={{ gap: 12, paddingHorizontal: 4, paddingBottom: 4 }}
-                                                                            >
+                                                                        <View style={{ marginBottom: 10, paddingHorizontal: 20 }}>
+                                                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
                                                                                 {allItems.map((item: any, index: number) => {
                                                                                     if (item.type === 'new_role') {
                                                                                         return (
@@ -28226,29 +28254,25 @@ Review the following raw transcribed text:
                                                                                                 key="new_role"
                                                                                                 onPress={handleNewRolePress}
                                                                                                 style={{
-                                                                                                    flexDirection: 'row',
-                                                                                                    alignItems: 'center',
+                                                                                                    width: '48%',
                                                                                                     padding: 16,
                                                                                                     backgroundColor: theme.buttonBg,
                                                                                                     borderRadius: 20,
                                                                                                     borderWidth: 1,
                                                                                                     borderColor: theme.border,
-                                                                                                    gap: 16,
                                                                                                     shadowColor: "#000",
                                                                                                     shadowOffset: { width: 0, height: 2 },
                                                                                                     shadowOpacity: 0.05,
                                                                                                     shadowRadius: 4,
-                                                                                                    elevation: 2
+                                                                                                    elevation: 2,
+                                                                                                    alignItems: 'flex-start'
                                                                                                 }}
                                                                                             >
-                                                                                                <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: theme.id === 'sepia' ? '#fffefb' : primaryColor, alignItems: 'center', justifyContent: 'center', borderWidth: theme.id === 'sepia' ? 1 : 0, borderColor: '#e3dccf' }}>
-                                                                                                    <Plus size={24} color={theme.id === 'sepia' ? theme.secondary : "white"} />
+                                                                                                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: theme.id === 'sepia' ? '#fffefb' : primaryColor, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: theme.id === 'sepia' ? 1 : 0, borderColor: '#e3dccf' }}>
+                                                                                                    <Plus size={22} color={theme.id === 'sepia' ? theme.secondary : "white"} />
                                                                                                 </View>
-                                                                                                <View style={{ flex: 1 }}>
-                                                                                                    <Text style={{ fontSize: 17, fontWeight: '700', color: theme.text, marginBottom: 2 }}>New Role</Text>
-                                                                                                    <Text style={{ fontSize: 13, color: theme.secondary }}>Create a custom AI character</Text>
-                                                                                                </View>
-                                                                                                <ChevronRight size={20} color={theme.secondary} opacity={0.5} />
+                                                                                                <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text, marginBottom: 4 }}>New Role</Text>
+                                                                                                <Text style={{ fontSize: 13, color: theme.secondary }} numberOfLines={2}>Create a custom persona</Text>
                                                                                             </TouchableOpacity>
                                                                                         );
                                                                                     } else {
@@ -28260,34 +28284,30 @@ Review the following raw transcribed text:
                                                                                                 onPress={() => onToolPress(tool)}
                                                                                                 onLongPress={() => handleRoleLongPress(tool)}
                                                                                                 style={{
-                                                                                                    flexDirection: 'row',
-                                                                                                    alignItems: 'center',
+                                                                                                    width: '48%',
                                                                                                     padding: 16,
                                                                                                     backgroundColor: theme.uiBg,
                                                                                                     borderRadius: 20,
                                                                                                     borderWidth: 1,
                                                                                                     borderColor: theme.border,
-                                                                                                    gap: 16,
                                                                                                     shadowColor: "#000",
                                                                                                     shadowOffset: { width: 0, height: 2 },
                                                                                                     shadowOpacity: 0.05,
                                                                                                     shadowRadius: 4,
-                                                                                                    elevation: 2
+                                                                                                    elevation: 2,
+                                                                                                    alignItems: 'flex-start'
                                                                                                 }}
                                                                                             >
-                                                                                                <LinearGradient colors={theme.toolColor || tool.color} style={{ width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }}>
-                                                                                                    <IconComponent size={24} color={!theme.toolColor ? "white" : tool.color[1]} />
+                                                                                                <LinearGradient colors={theme.toolColor || tool.color} style={{ width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                                                                                                    <IconComponent size={22} color={!theme.toolColor ? "white" : tool.color[1]} />
                                                                                                 </LinearGradient>
-                                                                                                <View style={{ flex: 1 }}>
-                                                                                                    <Text style={{ fontSize: 17, fontWeight: '600', color: theme.text, marginBottom: 2 }}>{tool.title}</Text>
-                                                                                                    <Text style={{ fontSize: 13, color: theme.secondary }} numberOfLines={1}>{tool.role}</Text>
-                                                                                                </View>
-                                                                                                <ChevronRight size={20} color={theme.secondary} opacity={0.5} />
+                                                                                                <Text style={{ fontSize: 16, fontWeight: '600', color: theme.text, marginBottom: 4 }} numberOfLines={1}>{tool.title}</Text>
+                                                                                                <Text style={{ fontSize: 13, color: theme.secondary }} numberOfLines={2}>{tool.role}</Text>
                                                                                             </TouchableOpacity>
                                                                                         );
                                                                                     }
                                                                                 })}
-                                                                            </ScrollView>
+                                                                            </View>
                                                                         </View>
                                                                     );
                                                                 })()}
@@ -28299,9 +28319,9 @@ Review the following raw transcribed text:
                                                     <View style={{
                                                         paddingHorizontal: 16,
                                                         paddingTop: 10,
-                                                        paddingBottom: Platform.OS === 'ios' ? 28 : 14,
+                                                        paddingBottom: isKeyboardVisible ? 10 : (Platform.OS === 'ios' ? 28 : 14),
                                                         backgroundColor: theme.bg,
-                                                        borderTopWidth: 1,
+                                                        borderTopWidth: isKeyboardVisible ? 0 : 1,
                                                         borderTopColor: theme.id === 'day' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)',
                                                         zIndex: 150,
                                                     }}>
