@@ -90,7 +90,6 @@ import {
     Palette,
     Pause,
     PenLine,
-    PhoneOff,
     Pin,
     Plane,
     Play,
@@ -15612,7 +15611,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                             >
                                 <Pressable
                                     onPress={handleFlip}
-                                    style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 20, paddingTop: 40, paddingBottom: 90 }}
+                                    style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 20, paddingTop: 40, paddingBottom: 90, minHeight: '100%' }}
                                 >
                                     <Text style={{ fontSize: 13 * (displaySettings.fontSize || 1), fontWeight: 'bold', color: theme.secondary, textTransform: 'uppercase', marginBottom: 20 }}>
                                         {flashcardSession.type === 'word' ? 'Word' : (flashcardSession.type === 'generated' ? 'Question' : 'Question')}
@@ -22755,7 +22754,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
         const borderBottomWidth = 0;
 
         return (
-            <View style={[styles.header, { backgroundColor: headerBg, borderColor: borderColor, borderBottomWidth: borderBottomWidth, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15 }]}>
+            <View style={[styles.header, { backgroundColor: headerBg, borderColor: borderColor, borderBottomWidth: borderBottomWidth, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, zIndex: 100 }]}>
                 {/* LEFT section */}
                 <View style={{ flex: 1, alignItems: 'flex-start' }}>
                     {appMode === 'reader' ? (
@@ -27113,17 +27112,17 @@ Review the following raw transcribed text:
                 flexDirection: 'row',
                 alignItems: 'center',
                 backgroundColor: theme.id === 'day' ? '#ffffff' : theme.uiBg,
-                borderColor: theme.border,
-                borderWidth: 1,
+                borderColor: quickSearchQuery.trim().length > 0 ? primaryColor + '40' : theme.border,
+                borderWidth: 1.5,
                 borderRadius: 30, // Pill shape
                 paddingHorizontal: 16,
-                paddingVertical: 5,
+                paddingVertical: 2,
                 width: '100%',
-                shadowColor: "#000",
+                shadowColor: primaryColor,
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
-                elevation: 4
+                shadowOpacity: quickSearchQuery.trim().length > 0 ? 0.1 : 0.05,
+                shadowRadius: 10,
+                elevation: 6
             }]}>
                 <TouchableOpacity
                     onPress={() => {

@@ -10,12 +10,13 @@ import {
     TextInput,
     KeyboardAvoidingView
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { 
     Mic, 
     Image as ImageIcon, 
-    Paperclip, 
-    Sparkles 
+    Paperclip
 } from 'lucide-react-native';
+import AppIcon from '../common/AppIcon';
 import ResponsiveWrapper from '../common/ResponsiveWrapper';
 import { Theme, Tool } from '../../constants/types';
 
@@ -48,30 +49,62 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
     cycleGlobalLanguage,
     renderHomeSearchBar
 }) => {
-    const greeting = `Hello, ${userName || 'there'}`;
     const isWeb = Platform.OS === 'web';
 
     return (
         <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1, backgroundColor: theme.bg }}
+            style={{ flex: 1, backgroundColor: theme.bg, overflow: 'hidden' }}
         >
-            <ResponsiveWrapper maxWidth={1000}>
+            {/* Full-screen subtle gradient/tint */}
+            <LinearGradient
+                colors={[theme.bg, theme.id === 'day' ? '#f8faff' : theme.uiBg]}
+                style={[StyleSheet.absoluteFill, { zIndex: 0 }]}
+            />
+
+            {/* Aesthetic Background Blobs & Watermark */}
+            <View style={[styles.blob, { top: -100, left: -100, backgroundColor: primaryColor + '10' }]} />
+            <View style={[styles.blob, { bottom: 100, right: -100, backgroundColor: primaryColor + '08' }]} />
+            
+            <View style={styles.watermarkContainer}>
+                <AppIcon size={320} style={{ opacity: theme.id === 'day' ? 0.06 : 0.08, transform: [{ rotate: '-15deg' }] }} />
+            </View>
+            
+            <ResponsiveWrapper maxWidth={1000} style={styles.mainContent}>
                 <ScrollView 
                     style={{ flex: 1 }}
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Greeting Section */}
+                    {/* Greeting Section - Redesigned as a Premium Card */}
                     <View style={styles.greetingSection}>
-                        <Text style={[styles.greetingText, { color: theme.text }]}>
-                            {greeting}
-                        </Text>
-                        <TouchableOpacity onPress={cycleGlobalLanguage}>
-                            <Text style={[styles.subtitle, { color: theme.secondary }]}>
-                                How can I help you learn <Text style={{ color: primaryColor, fontWeight: 'bold' }}>{displayLanguage}</Text> today?
-                            </Text>
-                        </TouchableOpacity>
+                        <LinearGradient
+                            colors={[theme.id === 'day' ? '#ffffff' : theme.uiBg, theme.id === 'day' ? '#fdfdff' : theme.uiBg]}
+                            style={[styles.greetingCard, { borderColor: theme.border }]}
+                        >
+                            <View style={styles.greetingContainer}>
+                                <View style={[styles.greetingLine, { backgroundColor: primaryColor }]} />
+                                <View style={{ flex: 1 }}>
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' }}>
+                                        <Text style={[styles.greetingText, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
+                                            Hello, {' '}
+                                            <Text style={{ color: primaryColor, fontWeight: '900' }}>
+                                                {userName || 'there'}
+                                            </Text>
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity onPress={cycleGlobalLanguage} activeOpacity={0.7} style={{ marginTop: 8 }}>
+                                        <Text style={[styles.subtitle, { color: theme.secondary, textAlign: 'left', lineHeight: 24 }]}>
+                                            How can I help you learn <Text style={{ color: primaryColor, fontWeight: 'bold' }}>{displayLanguage}</Text> today?
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                            
+                            <View style={[styles.sparkleContainer, { backgroundColor: theme.highlight }]}>
+                                <AppIcon size={18} />
+                            </View>
+                        </LinearGradient>
                     </View>
 
                     {/* Suggestion Chips / Tool Grid */}
@@ -82,16 +115,20 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
                                 onPress={() => onToolPress(tool)}
                                 style={[
                                     styles.toolCard, 
-                                    { backgroundColor: theme.uiBg, borderColor: theme.border }
+                                    { backgroundColor: theme.id === 'day' ? '#ffffff' : theme.uiBg, borderColor: theme.border }
                                 ]}
                             >
-                                <View style={styles.toolIconContainer}>
+                                <View style={[styles.toolIconContainer, { backgroundColor: theme.highlight }]}>
                                     <Text style={{ fontSize: 24 }}>{tool.emoji}</Text>
                                 </View>
-                                <Text style={[styles.toolTitle, { color: theme.text }]} numberOfLines={2}>
-                                    {tool.title}
-                                </Text>
-                                <Sparkles size={16} color={primaryColor} style={styles.sparkleIcon} />
+                                <View style={{ flex: 1, justifyContent: 'center' }}>
+                                    <Text style={[styles.toolTitle, { color: theme.text }]} numberOfLines={2}>
+                                        {tool.title}
+                                    </Text>
+                                </View>
+                                <View style={styles.toolArrow}>
+                                    <AppIcon size={14} style={{ opacity: 0.4 }} />
+                                </View>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -100,7 +137,7 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
                 {/* Pinned Search Bar */}
                 <View style={[styles.pinnedContainer, { backgroundColor: theme.bg }]}>
                     {renderHomeSearchBar ? renderHomeSearchBar() : (
-                        <View style={[styles.searchBarPill, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                        <View style={[styles.searchBarPill, { backgroundColor: theme.id === 'day' ? '#ffffff' : theme.uiBg, borderColor: theme.border }]}>
                             <View style={styles.leftIcons}>
                                 <TouchableOpacity onPress={onAttachPress} style={styles.iconBtn}>
                                     <Paperclip size={20} color={theme.secondary} />
@@ -131,24 +168,76 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
 };
 
 const styles = StyleSheet.create({
+    blob: {
+        position: 'absolute',
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        zIndex: 1,
+    },
+    watermarkContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2,
+    },
+    mainContent: {
+        zIndex: 10,
+    },
     scrollContent: {
         flexGrow: 1,
         padding: 24,
         paddingBottom: 120,
     },
     greetingSection: {
-        marginTop: Platform.OS === 'web' ? 60 : 40,
-        marginBottom: 40,
+        marginTop: Platform.OS === 'web' ? 60 : 30,
+        marginBottom: 30,
+    },
+    greetingCard: {
+        borderRadius: 24,
+        padding: 24,
+        borderWidth: 1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    sparkleContainer: {
+        position: 'absolute',
+        top: 15,
+        right: 15,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    greetingContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 16,
+    },
+    greetingLine: {
+        width: 4,
+        height: '100%',
+        borderRadius: 2,
     },
     greetingText: {
-        fontSize: 34,
+        fontSize: 32,
         fontWeight: '800',
-        letterSpacing: -0.5,
-        marginBottom: 8,
+        letterSpacing: -1,
     },
     subtitle: {
         fontSize: 18,
-        lineHeight: 24,
+        fontWeight: '500',
+        letterSpacing: -0.2,
     },
     gridContainer: {
         flexDirection: 'row',
@@ -159,34 +248,33 @@ const styles = StyleSheet.create({
     toolCard: {
         width: '48%',
         aspectRatio: 1,
-        borderRadius: 20,
+        borderRadius: 24,
         padding: 16,
         borderWidth: 1,
         justifyContent: 'space-between',
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.03,
         shadowRadius: 4,
         elevation: 2,
     },
     toolIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        backgroundColor: 'rgba(0,0,0,0.03)',
+        width: 48,
+        height: 48,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
     },
     toolTitle: {
         fontSize: 15,
-        fontWeight: '600',
+        fontWeight: '700',
         lineHeight: 20,
+        marginTop: 10,
     },
-    sparkleIcon: {
+    toolArrow: {
         position: 'absolute',
-        top: 12,
+        bottom: 12,
         right: 12,
-        opacity: 0.6,
     },
     pinnedContainer: {
         paddingHorizontal: 20,

@@ -18,9 +18,9 @@ import {
     Volume2,
     Square,
     Lightbulb,
-    CheckCircle,
-    Bot
+    CheckCircle
 } from 'lucide-react-native';
+import AppIcon from '../common/AppIcon';
 import ResponsiveWrapper from '../common/ResponsiveWrapper';
 import InteractiveText from '../common/InteractiveText';
 import { Theme, Message, Tool } from '../../constants/types';
@@ -109,7 +109,7 @@ const GeminiChat: React.FC<GeminiChatProps> = ({
                             ]}>
                                 {!isUser && (
                                     <View style={[styles.avatar, { backgroundColor: theme.uiBg }]}>
-                                        <Bot size={20} color={primaryColor} />
+                                        <AppIcon size={20} />
                                     </View>
                                 )}
                                 
@@ -158,7 +158,7 @@ const GeminiChat: React.FC<GeminiChatProps> = ({
                     {isTyping && (
                         <View style={styles.typingContainer}>
                             <View style={[styles.avatar, { backgroundColor: theme.uiBg }]}>
-                                <Bot size={20} color={primaryColor} />
+                                <AppIcon size={20} />
                             </View>
                             <ActivityIndicator size="small" color={primaryColor} style={{ marginLeft: 12 }} />
                         </View>
@@ -170,7 +170,7 @@ const GeminiChat: React.FC<GeminiChatProps> = ({
                     <View style={[styles.inputPill, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
                         <TextInput 
                             style={[styles.input, { color: theme.text }]}
-                            placeholder="Message Gemini..."
+                            placeholder="Message Assistant..."
                             placeholderTextColor={theme.secondary}
                             value={input}
                             onChangeText={setInput}

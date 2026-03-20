@@ -411,4 +411,6 @@ const InteractiveText = React.memo(({
 });
 
 
+InteractiveText.displayName = 'InteractiveText';
+
 export default InteractiveText;
