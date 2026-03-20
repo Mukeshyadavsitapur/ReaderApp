@@ -27356,6 +27356,8 @@ Review the following raw transcribed text:
                                                 }}
                                                 cycleGlobalLanguage={cycleGlobalLanguage}
                                                 renderHomeSearchBar={renderHomeSearchBar}
+                                                isKeyboardVisible={isKeyboardVisible}
+                                                keyboardHeight={keyboardHeight}
                                             />
                                         )}
                                     </View>

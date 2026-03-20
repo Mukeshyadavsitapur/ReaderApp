@@ -32,7 +32,9 @@ interface GeminiHomeProps {
     onAttachPress: () => void;
     onVisionPress: () => void;
     cycleGlobalLanguage: () => void;
-    renderHomeSearchBar: () => React.ReactNode; // Optional: if we want to reuse the parent's search bar exactly
+    renderHomeSearchBar: () => React.ReactNode; 
+    isKeyboardVisible?: boolean;
+    keyboardHeight?: number;
 }
 
 const GeminiHome: React.FC<GeminiHomeProps> = ({
@@ -47,13 +49,15 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
     onAttachPress,
     onVisionPress,
     cycleGlobalLanguage,
-    renderHomeSearchBar
+    renderHomeSearchBar,
+    isKeyboardVisible = false,
+    keyboardHeight = 0
 }) => {
     const isWeb = Platform.OS === 'web';
 
     return (
         <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ flex: 1, backgroundColor: theme.bg, overflow: 'hidden' }}
         >
             {/* Full-screen subtle gradient/tint */}
@@ -134,8 +138,12 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
                     </View>
                 </ScrollView>
 
-                {/* Pinned Search Bar */}
-                <View style={[styles.pinnedContainer, { backgroundColor: theme.bg }]}>
+                {/* Pinned Search Bar - Manual Precision Padding for Android */}
+                <View style={[
+                    styles.pinnedContainer, 
+                    { backgroundColor: theme.bg },
+                    Platform.OS === 'android' && isKeyboardVisible ? { paddingBottom: keyboardHeight } : null
+                ]}>
                     {renderHomeSearchBar ? renderHomeSearchBar() : (
                         <View style={[styles.searchBarPill, { backgroundColor: theme.id === 'day' ? '#ffffff' : theme.uiBg, borderColor: theme.border }]}>
                             <View style={styles.leftIcons}>
