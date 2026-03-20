@@ -27315,6 +27315,8 @@ Review the following raw transcribed text:
                                     <View style={{ flex: 1 }}>
                                         {activeChatbotChar ? (
                                             renderChatbotMessaging()
+                                        ) : isChatbotMode ? (
+                                            renderChatbotHome()
                                         ) : (
                                             <GeminiHome
                                                 theme={theme}
