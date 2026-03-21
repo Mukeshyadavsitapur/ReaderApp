@@ -84,7 +84,7 @@ const GeminiChat: React.FC<GeminiChatProps> = ({
     displayLanguage,
     scrollRef
 }) => {
-    const isWeb = Platform.OS === 'web';
+
     const [isKeyboardMode, setIsKeyboardMode] = React.useState(false);
 
     return (

@@ -53,7 +53,7 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
     isKeyboardVisible = false,
     keyboardHeight = 0
 }) => {
-    const isWeb = Platform.OS === 'web';
+
 
     return (
         <KeyboardAvoidingView 

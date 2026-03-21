@@ -14165,7 +14165,6 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                 image = await generateImage(imgPrompt);
             }
 
-            const personaName = selectedScenario?.title || "Personal Tutor";
             const targetToolId = selectedScenario?.id || 'ai_tutor';
 
             const newSession = {
@@ -31209,7 +31208,7 @@ Review the following raw transcribed text:
                                                                 animated: true,
                                                                 viewPosition: 0 // Position at the top of the screen
                                                             });
-                                                        } catch (e: any) {
+                                                        } catch {
                                                             // Fallback if item layout isn't measured yet
                                                             readerListRef.current?.scrollToEnd({ animated: true });
                                                         }
