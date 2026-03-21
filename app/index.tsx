@@ -14263,7 +14263,20 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
             `;
 
                 // 3. Call LLM
-                const response = await callLLM(prompt, systemRole);
+                let response = "";
+                try {
+                    const callContents = [{ role: "user", parts: [{ text: prompt }] }];
+                    response = await callLLM_Stream(
+                        callContents,
+                        systemRole,
+                        (chunk) => {
+                            setGenerationData(chunk);
+                        },
+                        null // modelOverride
+                    );
+                } catch (err: any) {
+                    response = "Error: " + err.message;
+                }
 
                 if (!response.startsWith("Error")) {
                     // 4. Create NEW Session (Branch) instead of appending to current file
@@ -14333,7 +14346,20 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
         try {
             const personaName = selectedScenario?.title || "Personal Tutor";
-            const rawContent = await callLLM(prompt, personaName);
+            let rawContent = "";
+            try {
+                const callContents = [{ role: "user", parts: [{ text: prompt }] }];
+                rawContent = await callLLM_Stream(
+                    callContents,
+                    personaName,
+                    (chunk) => {
+                        setGenerationData(chunk);
+                    },
+                    null // modelOverride
+                );
+            } catch (err: any) {
+                rawContent = "Error: " + err.message;
+            }
 
             // NEW: Check for error before proceeding (This catches Network/API errors, NOT missing key)
             // If key is missing, callLLM returns the Markdown Help Guide (starting with #), which bypasses this block.
@@ -20675,9 +20701,28 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
                     assetParts.forEach((part: any) => { if (part) contentParts.push(part); });
 
-                    // Call LLM directly
+                    // Call LLM strictly via stream
                     const contents = [{ role: "user", parts: contentParts }];
-                    let responseText = await callLLM(contents, "Personal Assistant");
+                    let responseText = "";
+                    try {
+                        let isFirstChunk = true;
+                        responseText = await callLLM_Stream(
+                            contents,
+                            "Personal Assistant",
+                            (chunk) => {
+                                // Add a prefix to the stream for better UI context
+                                if (isFirstChunk) {
+                                    setGenerationData("Assistant: " + chunk);
+                                    isFirstChunk = false;
+                                } else {
+                                    setGenerationData(chunk);
+                                }
+                            },
+                            null // modelOverride
+                        );
+                    } catch (err: any) {
+                        responseText = "Error: " + err.message;
+                    }
 
                     if (!responseText || responseText.startsWith("Error")) {
                         setGenerationData(null);
@@ -21509,7 +21554,27 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
         prompt += `\n\nVISUAL REQUIREMENT: \nAssess if this topic REQUIRES a visual aid to be understood.If it is a basic concept, definition, or text - heavy explanation, DO NOT generate an image.Only provide an image generation prompt if the concept is complex, spatial, or abstract(e.g.architectures, anatomy, physics diagrams) and hard to understand without it.If needed, provide it strictly on a new line at the end: IMAGE_PROMPT: <prompt>`;
 
-        const rawContent = await callLLM(prompt, systemRole);
+        let rawContent = "";
+        try {
+            const contents = [{ role: "user", parts: [{ text: prompt }] }];
+            let isFirstChunk = true;
+            rawContent = await callLLM_Stream(
+                contents,
+                systemRole,
+                (chunk) => {
+                    // Start rendering the text to the screen directly
+                    if (isFirstChunk) {
+                        setGenerationData(chunk);
+                        isFirstChunk = false;
+                    } else {
+                        setGenerationData(chunk);
+                    }
+                },
+                null // modelOverride
+            );
+        } catch (err: any) {
+            rawContent = "Error: " + err.message;
+        }
 
         // NEW: Check for error before saving
         if (rawContent.startsWith("Error")) {
@@ -21592,7 +21657,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
     // ... (getDictionaryData and subsequent functions)
     // Updated to support specific target language
     // NEW: Batch Definition Fetching
-    const fetchBatchDefinitions = async (words: string[], targetLang: string | null = null) => {
+    const fetchBatchDefinitions = async (words: string[], targetLang: string | null = null, onProgress?: (text: string) => void) => {
         if (!words || words.length === 0) return [];
 
         const userLanguages = displaySettings.availableLanguages && displaySettings.availableLanguages.length > 0
@@ -21607,6 +21672,51 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
             languageInstruction = `For definitions, you MUST provide the native dictionary definition in each of the requested languages (${langsToInclude}). Do NOT just translate the English definition. For each language, you must include the local translation of the word itself, followed by its natural definition in that language. Format definitions as SINGLE STRINGS combining them (e.g. "English: [English Def] / Hindi (Translation: आलू): [Native Hindi Def]"). Do NOT translate examples, provide them only in the queried word's original language. Do NOT return objects for definitions.`;
         }
 
+        // NEW: If onProgress is provided, use the fast text streaming flow instead of JSON batch
+        if (onProgress && words.length === 1) {
+            const streamPrompt = `
+            Task: Provide a simple definition and two examples for the word "${words[0]}".
+            User's Available Languages: ${userLanguages.join(', ')}.
+            ${languageInstruction}
+            
+            FORMAT: Plain text. Do not use JSON or complex markdown structures. Ensure the definition is clear and the examples are useful.
+            `;
+            
+            let rawStreamText = "";
+            try {
+                 const streamContents = [{ role: "user", parts: [{ text: streamPrompt }] }];
+                 rawStreamText = await callLLM_Stream(
+                     streamContents,
+                     "Dictionary",
+                     (chunk) => {
+                         onProgress(chunk);
+                     },
+                     null // modelOverride
+                 );
+                 
+                 if (!rawStreamText || rawStreamText.startsWith("Error")) {
+                     return [{ error: rawStreamText }];
+                 }
+                 
+                 return [{
+                     word: words[0],
+                     definition: rawStreamText, // Fallback field
+                     simple: { definition: rawStreamText, examples: [] },
+                     advanced: { definition: rawStreamText, examples: [], collocations: [], nuances: "" },
+                     phonetic: "",
+                     partOfSpeech: "",
+                     forms: [],
+                     synonyms: [],
+                     antonyms: []
+                 }];
+
+            } catch (err: any) {
+                console.error("Dictionary Stream Error:", err);
+                return [{ error: err.message }];
+            }
+        }
+
+        // Standard JSON Batch Flow
         const prompt = `
         Task: Analyze the following list of words: ${JSON.stringify(words)}.
         User's Available Languages: ${userLanguages.join(', ')}.
@@ -21717,11 +21827,11 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
         }
     };
 
-    const getDictionaryData = async (word: string, targetLang: any = null) => {
+    const getDictionaryData = async (word: string, targetLang: any = null, onProgress?: (text: string) => void) => {
         // NEW: Use the same fast model chain as batch processing
         // This ensures consistency across all dictionary features
         try {
-            const results = await fetchBatchDefinitions([word]);
+            const results = await fetchBatchDefinitions([word], targetLang, onProgress);
 
             if (results && results.length > 0) {
                 return results[0]; // Return the first (and only) result
@@ -21912,10 +22022,35 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
         }
 
         // API Call
-        const data = await getDictionaryData(cleanWordInput);
+        const currentLang = displaySettingsRef.current.language; // Use ref
+
+        // Initialize a skeleton structure so the modal can show the word immediately
+        const skeletonData = {
+            word: cleanWordInput,
+            language: currentLang,
+            simple: { definition: "Loading...", examples: [] },
+            advanced: null,
+            phonetic: "",
+            partOfSpeech: "",
+            forms: [],
+            synonyms: [],
+            antonyms: []
+        };
+        setWordData(skeletonData);
+
+        const data = await getDictionaryData(cleanWordInput, null, (chunkText: string) => {
+             // On each chunk, update the definition field of the skeleton
+             setWordData((prev: any) => ({
+                 ...prev,
+                 word: prev?.word || cleanWordInput,
+                 simple: {
+                     ...prev?.simple,
+                     definition: chunkText
+                 }
+             }));
+        });
 
         if (!data.error) {
-            const currentLang = displaySettingsRef.current.language; // Use ref
             const cleanData = { ...data, word: data.word || cleanWordInput };
             const completeData = {
                 ...cleanData,
@@ -21932,6 +22067,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
             setDictionaryCache((prev: any) => ({ ...prev, [cleanData.word.toLowerCase()]: completeData }));
             updateHistory(completeData);
         } else {
+            // If there's an error, data will contain the error string
             setWordData(data);
         }
         setIsDefining(false);
