@@ -133,6 +133,7 @@ import {
     Stethoscope,
     StickyNote,
     Sun,
+    SquarePen,
     Trash2,
     Trophy,
     Type,
@@ -22801,8 +22802,38 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                 backgroundColor: isDay ? 'rgba(255, 255, 255, 0.15)' : theme.buttonBg,
             };
 
-            rightAction = (
+            rightAction = isInOnboardingPreview ? (
+                <TouchableOpacity
+                    onPress={async () => {
+                        await saveSettings({ isOnboarded: true });
+                        setIsInOnboardingPreview(false);
+                        setAppMode("idle");
+                        Alert.alert("Success", "Welcome to Reader App! Your profile is ready.");
+                    }}
+                    style={{
+                        backgroundColor: isDay ? 'white' : primaryColor,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 5
+                    }}
+                >
+                    <Text style={{ color: isDay ? primaryColor : 'white', fontWeight: 'bold' }}>Finish</Text>
+                </TouchableOpacity>
+            ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            setAppMode('idle');
+                            setActiveTab('home');
+                        }}
+                        style={[readerBtnStyle, { marginRight: 8 }]}
+                    >
+                        <SquarePen size={20} color={isDay ? '#ffffff' : theme.text} />
+                    </TouchableOpacity>
+
                     <TouchableOpacity
                         onPress={() => setIsReaderMenuVisible(true)}
                         style={readerBtnStyle}
@@ -23393,43 +23424,9 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                             <View style={{ gap: 4, paddingVertical: 8 }}>
 
                                 {/* 1. New Session */}
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        toggleSideMenu(false);
-                                        setAppMode('idle');
-                                        setActiveTab('home');
-                                    }}
-                                    style={[styles.menuItem, (activeTab === 'home' && appMode === 'idle' && !isChatbotMode) && { backgroundColor: theme.highlight }]}
-                                >
-                                    <Plus size={20} color={primaryColor} />
-                                    <Text style={[styles.menuItemText, { color: theme.text }]}>New Session</Text>
-                                </TouchableOpacity>
 
-                                {/* Custom Menu Features */}
-                                {customMenuFeatures.map((feature) => (
-                                    <TouchableOpacity
-                                        key={feature.id}
-                                        onPress={() => {
-                                            toggleSideMenu(false);
-                                            setIsChatbotMode(false);
-                                            setSelectedScenario(feature);
-                                            saveSchoolConfig({ input: "", length: "Medium", complexity: "Intermediate", subject: "General" });
-                                            setAppMode('setup');
-                                        }}
-                                        onLongPress={() => handleLongPressCustomFeature(feature)}
-                                        style={[styles.menuItem, (selectedScenario?.id === feature.id && appMode === 'setup') && { backgroundColor: theme.highlight }]}
-                                    >
-                                        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: primaryColor + '10', alignItems: 'center', justifyContent: 'center', marginRight: 2, borderWidth: 1, borderColor: primaryColor + '20' }}>
-                                            <Text style={{ fontSize: 11, fontWeight: '700', color: primaryColor }}>
-                                                {feature.title.charAt(0).toUpperCase()}
-                                            </Text>
-                                        </View>
-                                        <Text style={[styles.menuItemText, { color: theme.text }]} numberOfLines={1}>{feature.title}</Text>
-                                        <View style={{ backgroundColor: primaryColor + '15', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, marginLeft: 'auto' }}>
-                                            <Text style={{ fontSize: 8, color: primaryColor, fontWeight: 'bold' }}>NEW</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                ))}
+                                {/* 1. New Session */}
+
 
                                 {/* 2. Notes */}
                                 <TouchableOpacity
@@ -23562,6 +23559,32 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                                     <Plus size={20} color={theme.secondary} />
                                     <Text style={[styles.menuItemText, { color: theme.secondary }]}>Generate New Feature</Text>
                                 </TouchableOpacity>
+
+                                {/* Custom Menu Features */}
+                                {customMenuFeatures.map((feature) => (
+                                    <TouchableOpacity
+                                        key={feature.id}
+                                        onPress={() => {
+                                            toggleSideMenu(false);
+                                            setIsChatbotMode(false);
+                                            setSelectedScenario(feature);
+                                            saveSchoolConfig({ input: "", length: "Medium", complexity: "Intermediate", subject: "General" });
+                                            setAppMode('setup');
+                                        }}
+                                        onLongPress={() => handleLongPressCustomFeature(feature)}
+                                        style={[styles.menuItem, (selectedScenario?.id === feature.id && appMode === 'setup') && { backgroundColor: theme.highlight }]}
+                                    >
+                                        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: primaryColor + '10', alignItems: 'center', justifyContent: 'center', marginRight: 2, borderWidth: 1, borderColor: primaryColor + '20' }}>
+                                            <Text style={{ fontSize: 11, fontWeight: '700', color: primaryColor }}>
+                                                {feature.title.charAt(0).toUpperCase()}
+                                            </Text>
+                                        </View>
+                                        <Text style={[styles.menuItemText, { color: theme.text }]} numberOfLines={1}>{feature.title}</Text>
+                                        <View style={{ backgroundColor: primaryColor + '15', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, marginLeft: 'auto' }}>
+                                            <Text style={{ fontSize: 8, color: primaryColor, fontWeight: 'bold' }}>NEW</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
                             </View>
 
                             {renderGroup("Today", limitedGroups.today)}
@@ -31270,36 +31293,6 @@ Review the following raw transcribed text:
                                                     )}
                                                 </View>
 
-                                        {/* Onboarding Preview Footer - LANDSCAPE MODE */}
-                                        {isInOnboardingPreview && (
-                                            <OnboardingPreviewFooter
-                                                theme={theme}
-                                                customApiKey={customApiKey}
-                                                setCustomApiKey={setCustomApiKey}
-                                                groqApiKey={displaySettings.groqApiKey || ''}
-                                                setGroqApiKey={(key: string) => saveSettings({ groqApiKey: key })}
-                                                llmProvider={displaySettings.llmProvider || 'groq'}
-                                                setProvider={(p: string) => saveSettings({ llmProvider: p })}
-                                                testConnection={handleTestConnection}
-                                                connectionStatus={apiConnectionStatus}
-                                                isLandscape={isLandscape}
-                                                onSkip={async () => {
-                                                    await saveSettings({ isOnboarded: true });
-                                                    setIsInOnboardingPreview(false);
-                                                    setAppMode("idle");
-                                                }}
-                                                onFinish={async () => {
-                                                    if (apiConnectionStatus !== 'success') {
-                                                        Alert.alert("API Key Required", "Please test your connection first, or skip for now.");
-                                                        return;
-                                                    }
-                                                    await saveSettings({ isOnboarded: true });
-                                                    setIsInOnboardingPreview(false);
-                                                    setAppMode("idle");
-                                                    Alert.alert("Success", "Welcome to Reader App! Your profile and AI are ready.");
-                                                }}
-                                            />
-                                        )}
                                     </>
                                 ) : (
                                     // Standard Portrait Layout (or Orphan Audio) - Existing Code wrapped
@@ -31963,70 +31956,70 @@ Review the following raw transcribed text:
                                                     </View>
                                                 )}
 
-                                                    <View style={[styles.searchBar, {
-                                                        backgroundColor: theme.id === 'day' ? '#ffffff' : theme.uiBg,
-                                                        borderColor: quickSearchQuery.trim().length > 0 ? primaryColor + '40' : theme.border,
-                                                        borderRadius: 30, // Modern Pill Shape
-                                                        height: 60,
-                                                        borderWidth: 1.0,
-                                                        paddingHorizontal: 12,
-                                                        marginBottom: 0,
-                                                        shadowColor: "#000",
-                                                        shadowOffset: { width: 0, height: 4 },
-                                                        shadowOpacity: 0.1,
-                                                        shadowRadius: 12,
-                                                        elevation: 8
-                                                    }]}>
-                                                        {/* UNIFIED SEARCH: Toggle Button Removed. Logic defaults to AI, but shows suggestions for Library. */}
+                                                     <View style={[styles.searchBar, {
+                                                         backgroundColor: theme.id === 'day' ? '#ffffff' : theme.uiBg,
+                                                         borderColor: quickSearchQuery.trim().length > 0 ? primaryColor + '40' : theme.border,
+                                                         borderRadius: 30, // Modern Pill Shape
+                                                         height: 60,
+                                                         borderWidth: 1.0,
+                                                         paddingHorizontal: 12,
+                                                         marginBottom: 0,
+                                                         shadowColor: "#000",
+                                                         shadowOffset: { width: 0, height: 4 },
+                                                         shadowOpacity: 0.1,
+                                                         shadowRadius: 12,
+                                                         elevation: 8
+                                                     }]}>
+                                                         {/* UNIFIED SEARCH: Toggle Button Removed. Logic defaults to AI, but shows suggestions for Library. */}
 
-                                                        <TextInput
-                                                            style={[styles.searchInput, { color: theme.text, marginLeft: 10 }]} // Added marginLeft
-                                                            // UPDATED: Unified Placeholder
-                                                            placeholder={
-                                                                readingSession.toolId !== 'orphan_audio'
-                                                                    ? "Ask anything..."
-                                                                    : "Ask follow-up..." //chage placeholder text ask anything and ask folloup due to space problem.
-                                                            }
-                                                            placeholderTextColor={theme.secondary}
-                                                            value={quickSearchQuery}
-                                                            onChangeText={setQuickSearchQuery}
-                                                            onSubmitEditing={() => handleQuickSearch()}
-                                                            multiline={true}
-                                                        />
+                                                         <TextInput
+                                                             style={[styles.searchInput, { color: theme.text, marginLeft: 10 }]} // Added marginLeft
+                                                             // UPDATED: Unified Placeholder
+                                                             placeholder={
+                                                                 readingSession.toolId !== 'orphan_audio'
+                                                                     ? "Ask anything..."
+                                                                     : "Ask follow-up..." //chage placeholder text ask anything and ask folloup due to space problem.
+                                                             }
+                                                             placeholderTextColor={theme.secondary}
+                                                             value={quickSearchQuery}
+                                                             onChangeText={setQuickSearchQuery}
+                                                             onSubmitEditing={() => handleQuickSearch()}
+                                                             multiline={true}
+                                                         />
 
-                                                        {renderMicButton('search', { marginRight: 4, elevation: 0, shadowOpacity: 0 }, 20)}
+                                                         {renderMicButton('search', { marginRight: 4, elevation: 0, shadowOpacity: 0 }, 20)}
 
-                                                        <TouchableOpacity
-                                                            onPress={() => { setImagePickerMode('vision'); setVisionDraft({ uris: [], prompt: quickSearchQuery }); setShowImageSourceModal(true); }}
-                                                            style={{
-                                                                width: 38,
-                                                                height: 38,
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                marginRight: 4
-                                                            }}
-                                                        >
-                                                            <Camera size={20} color={theme.text} />
-                                                        </TouchableOpacity>
+                                                         <TouchableOpacity
+                                                             onPress={() => { setImagePickerMode('vision'); setVisionDraft({ uris: [], prompt: quickSearchQuery }); setShowImageSourceModal(true); }}
+                                                             style={{
+                                                                 width: 38,
+                                                                 height: 38,
+                                                                 alignItems: 'center',
+                                                                 justifyContent: 'center',
+                                                                 marginRight: 4
+                                                             }}
+                                                         >
+                                                             <Camera size={20} color={theme.text} />
+                                                         </TouchableOpacity>
 
-                                                        <TouchableOpacity disabled={isReaderQuerying} onPress={() => handleQuickSearch()} style={{
-                                                            width: 38,
-                                                            height: 38,
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}>
-                                                            {/* UPDATED: Show spinner during Reader Query */}
-                                                            {isReaderQuerying ? (
-                                                                <ActivityIndicator size="small" color={primaryColor} />
-                                                            ) : (
-                                                                quickSearchQuery.trim().length > 0 ? (
-                                                                    <ArrowRight size={20} color={primaryColor} />
-                                                                ) : (
-                                                                    <Search size={20} color={theme.text} />
-                                                                )
-                                                            )}
-                                                        </TouchableOpacity>
-                                                    </View>
+                                                         <TouchableOpacity disabled={isReaderQuerying} onPress={() => handleQuickSearch()} style={{
+                                                             width: 38,
+                                                             height: 38,
+                                                             alignItems: 'center',
+                                                             justifyContent: 'center'
+                                                         }}>
+                                                             {/* UPDATED: Show spinner during Reader Query */}
+                                                             {isReaderQuerying ? (
+                                                                 <ActivityIndicator size="small" color={primaryColor} />
+                                                             ) : (
+                                                                 quickSearchQuery.trim().length > 0 ? (
+                                                                     <ArrowRight size={20} color={primaryColor} />
+                                                                 ) : (
+                                                                     <Search size={20} color={theme.text} />
+                                                                 )
+                                                             )}
+                                                         </TouchableOpacity>
+                                                     </View>
 
                                                     {/* NEW: Library Suggestions Dropdown */}
                                                     {quickSearchQuery.trim().length > 0 && librarySuggestions.length > 0 && (
@@ -32177,36 +32170,6 @@ Review the following raw transcribed text:
                                             </View>
                                         )}
 
-                                        {/* Onboarding Preview Footer - NOW INSIDE KEYBOARD AVOIDING VIEW */}
-                                        {isInOnboardingPreview && (
-                                            <OnboardingPreviewFooter
-                                                theme={theme}
-                                                customApiKey={customApiKey}
-                                                setCustomApiKey={setCustomApiKey}
-                                                groqApiKey={displaySettings.groqApiKey || ''}
-                                                setGroqApiKey={(key: string) => saveSettings({ groqApiKey: key })}
-                                                llmProvider={displaySettings.llmProvider || 'groq'}
-                                                setProvider={(p: string) => saveSettings({ llmProvider: p })}
-                                                testConnection={handleTestConnection}
-                                                connectionStatus={apiConnectionStatus}
-                                                isLandscape={isLandscape}
-                                                onSkip={async () => {
-                                                    await saveSettings({ isOnboarded: true });
-                                                    setIsInOnboardingPreview(false);
-                                                    setAppMode("idle");
-                                                }}
-                                                onFinish={async () => {
-                                                    if (apiConnectionStatus !== 'success') {
-                                                        Alert.alert("API Key Required", "Please test your connection first, or skip for now.");
-                                                        return;
-                                                    }
-                                                    await saveSettings({ isOnboarded: true });
-                                                    setIsInOnboardingPreview(false);
-                                                    setAppMode("idle");
-                                                    Alert.alert("Success", "Welcome to Reader App! Your profile and AI are ready.");
-                                                }}
-                                            />
-                                        )}
                                     </KeyboardAvoidingView>
                                 )}
                             </View>
