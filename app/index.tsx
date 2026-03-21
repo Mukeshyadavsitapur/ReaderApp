@@ -7830,6 +7830,7 @@ export default function App() {
         let textBuffer: any[] = [];
         let textStartOffset = 0;
 
+        let nextTableHidden = false;
         let nextTableLabel = "Show Answers";
 
         const flushTextBuffer = () => {
@@ -11274,9 +11275,7 @@ RETURN ONLY THE SUMMARY TEXT starting with "I...".`;
         `;
         }
 
-        // Add Visual Requirement to prompt
-        prompt += `\n\nVISUAL REQUIREMENT:
-    At the very end of your response, strictly on a new line, provide a detailed image generation prompt to create a cover or scene for this chapter. Format: IMAGE_PROMPT: <prompt>`;
+        // Visual requirement removed per user preference for faster streaming
 
         let rawContent = "";
         try {
@@ -11316,10 +11315,11 @@ RETURN ONLY THE SUMMARY TEXT starting with "I...".`;
         let image = null;
         const imgMatch = content.match(/IMAGE_PROMPT:\s*(.*)/);
         if (imgMatch) {
-            const imgPrompt = imgMatch[1].trim();
+            // We strip the prompt text from the content so the user doesn't see it
             content = content.replace(/IMAGE_PROMPT:.*$/, '').trim();
-            setGenerationData("Illustrating...");
-            image = await generateImage(imgPrompt);
+            // Feature disabled per user request: "keep only for quiz"
+            // setGenerationData("Illustrating...");
+            // image = await generateImage(imgPrompt);
         }
 
         // NEW: Calculate Sequence Number (Footer)
@@ -11463,8 +11463,7 @@ RETURN ONLY THE SUMMARY TEXT starting with "I...".`;
           `;
         }
 
-        prompt += `\n\nVISUAL REQUIREMENT:
-      At the very end of your response, strictly on a new line, provide a detailed image generation prompt for a cover image for this chapter. Format: IMAGE_PROMPT: <prompt>`;
+        // Visual requirement removed per user preference
 
         try {
             const rawContent = await callLLM(prompt, systemRole);
@@ -14038,11 +14037,12 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
             if (groqKey) providersToTry.push({ id: 'groq', key: groqKey });
         }
 
+        console.log(`Image providers queued: ${providersToTry.map(p => p.id).join(', ')}. GeminiKey present: ${!!geminiKey}, GroqKey present: ${!!groqKey}`);
+
         if (providersToTry.length === 0) return null;
 
         const MAX_RETRIES = 3;
 
-        // Helper: use native XHR for non-streaming requests to bypass fetch polyfill issues
         const xhrPost = (url: string, headers: Record<string, string>, body: string): Promise<{ status: number; text: string }> =>
             new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
@@ -14051,7 +14051,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                 xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
                 xhr.onerror = () => reject(new Error('Network request failed'));
                 xhr.ontimeout = () => reject(new Error('Request timed out'));
-                xhr.timeout = 25000; // 25s timeout for images
+                xhr.timeout = 25000;
                 xhr.send(body);
             });
 
@@ -14064,6 +14064,8 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                 modelsToTry = (displaySettings.imageModels || IMAGE_MODELS).filter((m: string) => GROQ_IMAGE_MODELS.includes(m) || !m.includes('imagen'));
                 if (modelsToTry.length === 0) modelsToTry = GROQ_IMAGE_MODELS;
             }
+
+            console.log(`Provider ${provider.id} queued models: ${modelsToTry.join(', ')}`);
 
             for (const modelId of modelsToTry) {
                 let attempts = 0;
@@ -14126,7 +14128,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                             if (!response.ok) {
                                 const errorText = await response.text();
                                 console.warn(`Image Model ${modelId} failed with ${response.status}: ${errorText}`);
-                                break; // Non-retriable error
+                                break;
                             }
 
                             const data = await response.json();
@@ -14135,7 +14137,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                                 if (isRateLimited) setIsRateLimited(false);
                                 return `data:image/png;base64,${base64}`;
                             } else {
-                                break; // Valid response but no image
+                                break; 
                             }
                         }
                     } catch (e: any) {
@@ -14150,6 +14152,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                 }
             }
         }
+        console.log("Image generation failed for all queued providers.");
         return null;
     };
 
@@ -14393,9 +14396,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
     User Query: "${queryToUse}"
     
-    VISUAL REQUIREMENT:
-    - Only provide an image prompt if the topic is complex, spatial, or hard to visualize without a diagram.
-    - If generating, strictly on a new line at the end: IMAGE_PROMPT: <prompt>
+    User Query: "${queryToUse}"
     `;
 
         try {
@@ -20462,15 +20463,8 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                `;
             }
 
-            if (displaySettings.imageGenerationEnabled) {
-                if (imagePickerMode === 'story') {
-                    systemPrompt += `\n\nVISUAL REQUIREMENT:\nAt the very end of your response, strictly on a new line, provide a detailed image generation prompt to create a cinematic cover illustration for this story. Format: IMAGE_PROMPT: <prompt>`;
-                } else if (imagePickerMode === 'writer' || imagePickerMode === 'math' || imagePickerMode === 'doctor' || imagePickerMode === 'email_pro' || imagePickerMode === 'greetings_gen' || imagePickerMode === 'word_help' || imagePickerMode === 'work_organizer' || imagePickerMode === 'editorial' || imagePickerMode === 'teacher' || imagePickerMode === 'story_next') {
-                    systemPrompt += `\n\nVISUAL REQUIREMENT:\nOnly if the user explicitly asks for an image, provide a prompt. Otherwise, do NOT generate an image prompt.`;
-                } else {
-                    systemPrompt += `\n\nVISUAL REQUIREMENT:\nAssess if a visual summary is necessary. If the analysis is basic or text-sufficient, DO NOT generate an image. Only provide an image prompt if the insights are complex and require a visual diagram or chart to be understood. If needed, format strictly on a new line at the end: IMAGE_PROMPT: <prompt>`;
-                }
-            }
+            // Visual requirement removed per user preference
+
 
             const contentParts = [{ text: systemPrompt }];
 
@@ -20633,12 +20627,12 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
              `;
             }
 
-            const visualPrompt = prompt + `\n\nVISUAL REQUIREMENT:\nAt the very end of your response, strictly on a new line, provide a detailed image generation prompt to create a relevant cover image, diagram, or infographic that visually explains the concept. Format: IMAGE_PROMPT: <prompt>`;
+            // Visual requirement removed per user preference
 
             // STREAM the response so text appears progressively
             let rawContent = "";
             try {
-                const callContents = [{ role: "user", parts: [{ text: visualPrompt }] }];
+                const callContents = [{ role: "user", parts: [{ text: prompt }] }];
                 rawContent = await callLLM_Stream(
                     callContents,
                     selectedScenario.title,
@@ -21622,7 +21616,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                 break;
         }
 
-        prompt += `\n\nVISUAL REQUIREMENT: \nAssess if this topic REQUIRES a visual aid to be understood.If it is a basic concept, definition, or text - heavy explanation, DO NOT generate an image.Only provide an image generation prompt if the concept is complex, spatial, or abstract(e.g.architectures, anatomy, physics diagrams) and hard to understand without it.If needed, provide it strictly on a new line at the end: IMAGE_PROMPT: <prompt>`;
+        // Visual requirements removed per user preference
 
         let rawContent = "";
         try {
@@ -21657,13 +21651,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
         let content = rawContent;
         let image = null;
-        const imgMatch = content.match(/IMAGE_PROMPT:\s*(.*)/);
-        if (imgMatch) {
-            const imgPrompt = imgMatch[1].trim();
-            content = content.replace(/IMAGE_PROMPT:.*$/, '').trim();
-            setGenerationData("Painting...");
-            image = await generateImage(imgPrompt);
-        }
 
         // Clean and truncate input for the title to keep history clean
         const cleanInput = currentInput.replace(/\n/g, " ").trim();
