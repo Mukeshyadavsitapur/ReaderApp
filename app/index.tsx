@@ -6527,7 +6527,7 @@ export default function App() {
 
     // ... (getAllTools helper) ...
     const getAllTools = () => {
-        return [...uiData.tools, ...customTools];
+        return [...uiData.tools, ...customTools, ...customMenuFeatures];
     };
 
     // --- UPDATED UI TRANSLATION LOGIC ---
@@ -24457,29 +24457,33 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                         </TouchableOpacity>
                                     </View>
                                 )}
-                                <Text style={{ color: theme.secondary, fontWeight: '700', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>INPUT</Text>
-                                <View>
-                                    <TextInput
-                                        style={[styles.textArea, {
-                                            color: theme.text,
-                                            borderColor: theme.border,
-                                            backgroundColor: theme.inputBg,
-                                            marginBottom: 0,
-                                            fontSize: 16,
-                                            textAlignVertical: 'top',
-                                            paddingTop: 14,
-                                            height: 150 // Fixed height for input in this mode
-                                        }]}
-                                        placeholder={selectedScenario?.placeholder}
-                                        placeholderTextColor={theme.secondary}
-                                        value={schoolConfig.input}
-                                        onChangeText={(text) => setSchoolConfig({ ...schoolConfig, input: text })}
-                                        multiline
-                                    />
-                                    {renderMicButton('setup_input', { position: 'absolute', bottom: 10, right: 10, backgroundColor: theme.uiBg })}
+                                {!selectedScenario?.isCustom && selectedScenario?.id !== 'ai_tutor' && (
+                                <View style={{ marginBottom: 20 }}>
+                                    <Text style={{ color: theme.secondary, fontWeight: '700', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>INPUT</Text>
+                                    <View>
+                                        <TextInput
+                                            style={[styles.textArea, {
+                                                color: theme.text,
+                                                borderColor: theme.border,
+                                                backgroundColor: theme.inputBg,
+                                                marginBottom: 0,
+                                                fontSize: 16,
+                                                textAlignVertical: 'top',
+                                                paddingTop: 14,
+                                                height: 150 // Fixed height for input in this mode
+                                            }]}
+                                            placeholder={selectedScenario?.placeholder}
+                                            placeholderTextColor={theme.secondary}
+                                            value={schoolConfig.input}
+                                            onChangeText={(text) => setSchoolConfig({ ...schoolConfig, input: text })}
+                                            multiline
+                                        />
+                                        {renderMicButton('setup_input', { position: 'absolute', bottom: 10, right: 10, backgroundColor: theme.uiBg })}
+                                    </View>
                                 </View>
-                            </View>
-                            <ScrollView
+                            )}
+                        </View>
+                        <ScrollView
                                 contentContainerStyle={{ padding: 20, paddingBottom: 20 }}
                                 keyboardShouldPersistTaps="handled"
                                 showsVerticalScrollIndicator={false}
@@ -24756,31 +24760,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                     <View style={{ marginBottom: 25 }}>
                                         {/* 1. SEGMENTED TOGGLE (Unified Switch) */}
 
-
-                                        {/* 2. INPUT AREA (Moved Above Ideas) */}
-                                        <Text style={{ color: theme.secondary, fontWeight: '700', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>INPUT</Text>
-                                        <View style={{ marginBottom: 20 }}>
-                                            <TextInput
-                                                style={[styles.textArea, {
-                                                    color: theme.text,
-                                                    borderColor: theme.border,
-                                                    backgroundColor: theme.inputBg,
-                                                    marginBottom: 0,
-                                                    fontSize: 16,
-                                                    textAlignVertical: 'top',
-                                                    paddingTop: 14,
-                                                    minHeight: 150
-                                                }]}
-                                                placeholder={selectedScenario?.placeholder}
-                                                placeholderTextColor={theme.secondary}
-                                                value={schoolConfig.input}
-                                                onChangeText={(text) => setSchoolConfig({ ...schoolConfig, input: text })}
-                                                multiline
-                                            />
-                                            {renderMicButton('setup_input', { position: 'absolute', bottom: 10, right: 10, backgroundColor: theme.uiBg })}
-                                        </View>
-
-                                        {/* 3. VISION & QUICK ACTIONS */}
+                                        {/* Input Hidden as we use pinned pill input at the bottom */}
                                         {/* 3. VISION & IDEAS HEADER */}
                                         <Text style={{ color: theme.secondary, fontWeight: '700', fontSize: 11, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>VISION & IDEAS</Text>
 
@@ -25498,8 +25478,8 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                                 )}
                             </ScrollView>
 
-                            {/* Pinned Bottom Input exclusively for Custom Features - Precision Keyboard Tracking */}
-                            {selectedScenario?.isCustom && (
+                            {/* Pinned Bottom Input for Custom Features & AI Tutor - Modern Pill Shape */}
+                            {(selectedScenario?.isCustom || selectedScenario?.id === 'ai_tutor') && (
                                 <View style={[{ padding: 15, paddingBottom: Platform.OS === 'ios' ? 25 : 15, backgroundColor: theme.bg, borderTopWidth: 1, borderTopColor: theme.border }, Platform.OS === 'android' && isKeyboardVisible ? { paddingBottom: keyboardHeight } : null]}>
                                     <View style={[{
                                         flexDirection: 'row',
@@ -25568,7 +25548,7 @@ NO META-COMMENTARY ON PROFILE: Do NOT explicitly mention the user's profile deta
                     )}
                 </KeyboardAvoidingView>
 
-                {!isExpandedInputMode && !isFixedInputMode && selectedScenario?.id !== 'examiner' && !selectedScenario?.isCustom && (
+                {!isExpandedInputMode && !isFixedInputMode && selectedScenario?.id !== 'examiner' && !selectedScenario?.isCustom && selectedScenario?.id !== 'ai_tutor' && (
                     <DraggableFAB
                         onPress={handleStartScenario}
                         label={selectedScenario?.actionLabel || "Start"}
@@ -30933,7 +30913,19 @@ Review the following raw transcribed text:
                                                 {isReaderSearchExpanded ? (
                                                     <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
                                                         <View style={{ flex: 1 }}>
-                                                            <View style={[styles.searchBar, { backgroundColor: theme.inputBg, borderColor: theme.border, marginBottom: 0 }]}>
+                                                            <View style={[styles.searchBar, { 
+                                                                backgroundColor: theme.id === 'day' ? '#ffffff' : theme.uiBg, 
+                                                                borderColor: quickSearchQuery.trim().length > 0 ? primaryColor + '40' : theme.border, 
+                                                                borderRadius: 30, // Modern Pill Shape
+                                                                borderWidth: 1.5,
+                                                                paddingHorizontal: 8, // Adjusted for pill inner content
+                                                                marginBottom: 0,
+                                                                shadowColor: primaryColor,
+                                                                shadowOffset: { width: 0, height: 4 },
+                                                                shadowOpacity: quickSearchQuery.trim().length > 0 ? 0.1 : 0.05,
+                                                                shadowRadius: 10,
+                                                                elevation: 6
+                                                            }]}>
                                                                 {/* UNIFIED SEARCH: Toggle Button Removed. Logic defaults to AI, but shows suggestions for Library. */}
 
                                                                 <TextInput
