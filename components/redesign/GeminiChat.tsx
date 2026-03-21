@@ -25,7 +25,7 @@ import {
 import AppIcon from '../common/AppIcon';
 import ResponsiveWrapper from '../common/ResponsiveWrapper';
 import InteractiveText from '../common/InteractiveText';
-import { Theme, Message, Tool } from '../../constants/types';
+import { Theme, Message, Tool, SpeechRange } from '../../constants/types';
 
 interface GeminiChatProps {
     theme: Theme;
@@ -51,6 +51,7 @@ interface GeminiChatProps {
     grammarCheckingMsgId: string | null;
     brainstormHints: Record<string, string>;
     grammarHints: Record<string, string>;
+    speechRange: SpeechRange | null;
     msgLanguages: Record<string, string>;
     displayLanguage: string;
     scrollRef: React.RefObject<FlatList | null>;
@@ -80,12 +81,63 @@ const GeminiChat: React.FC<GeminiChatProps> = ({
     grammarCheckingMsgId,
     brainstormHints,
     grammarHints,
+    speechRange,
     msgLanguages,
     displayLanguage,
     scrollRef
 }) => {
 
     const [isKeyboardMode, setIsKeyboardMode] = React.useState(false);
+    const [shouldFollow, setShouldFollow] = React.useState(true);
+    const lastMsgCount = React.useRef(messages.length);
+
+    // Auto-scroll logic: Follow TTS or Scroll to New Message
+    React.useEffect(() => {
+        if (!scrollRef.current) return;
+
+        // 1. New message added: Always scroll to end if it's from user, or follow if enabled
+        if (messages.length > lastMsgCount.current) {
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg.role === 'user') {
+                setShouldFollow(true);
+                scrollRef.current.scrollToEnd({ animated: true });
+            } else if (shouldFollow) {
+                // For AI messages, we start following
+                scrollRef.current.scrollToEnd({ animated: true });
+            }
+            lastMsgCount.current = messages.length;
+            return;
+        }
+
+        // 2. TTS Follow Logic
+        if (speakingMsgId && speechRange && shouldFollow) {
+            const msgIdx = messages.findIndex(m => m.id === speakingMsgId);
+            if (msgIdx !== -1) {
+                const msg = messages[msgIdx];
+                const progress = speechRange.start / (msg.content.length || 1);
+                
+                // Keep the spoken part in the upper third of the screen (viewPosition 0 to 0.3)
+                // We use a small threshold to avoid jittery small scrolls
+                if (progress > 0.1) {
+                    scrollRef.current.scrollToIndex({
+                        index: msgIdx,
+                        viewPosition: Math.min(progress, 0.4), // Don't push it too far up
+                        animated: true,
+                    });
+                }
+            }
+        }
+    }, [messages.length, speechRange, speakingMsgId, shouldFollow]);
+
+    const handleScroll = (event: any) => {
+        const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+        const isAtBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 50;
+        
+        // If user scrolls to bottom, re-enable following
+        if (isAtBottom && !shouldFollow) {
+            setShouldFollow(true);
+        }
+    };
 
     return (
         <KeyboardAvoidingView 
@@ -104,7 +156,8 @@ const GeminiChat: React.FC<GeminiChatProps> = ({
                     initialNumToRender={10}
                     maxToRenderPerBatch={5}
                     windowSize={5}
-                    onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+                    onScroll={handleScroll}
+                    onScrollBeginDrag={() => setShouldFollow(false)}
                     renderItem={({ item: msg }) => {
                         const isUser = msg.role === 'user';
                         const isAssistant = msg.role === 'assistant';
@@ -114,58 +167,72 @@ const GeminiChat: React.FC<GeminiChatProps> = ({
                                 styles.messageContainer,
                                 isUser ? styles.userContainer : styles.assistantContainer
                             ]}>
-                                {!isUser && (
-                                    <View style={[styles.avatar, { backgroundColor: theme.uiBg }]}>
-                                        {activeChar?.isCustom ? (
-                                            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: (activeChar.color?.[0] || primaryColor) + '10', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: (activeChar.color?.[0] || primaryColor) + '20' }}>
-                                                <Text style={{ fontSize: 12, fontWeight: '700', color: activeChar.color?.[0] || primaryColor }}>
-                                                    {activeChar.title.charAt(0).toUpperCase()}
-                                                </Text>
-                                            </View>
-                                        ) : (
-                                            <AppIcon size={20} />
-                                        )}
-                                    </View>
-                                )}
-                                
                                 <View style={[
                                     styles.bubble,
                                     isUser 
                                         ? { backgroundColor: primaryColor, borderBottomRightRadius: 4 } 
-                                        : { backgroundColor: theme.bubbleAI, borderBottomLeftRadius: 4, marginLeft: 12 }
+                                        : { backgroundColor: theme.bubbleAI, borderBottomLeftRadius: 4 }
                                 ]}>
                                     <InteractiveText 
                                         rawText={msg.content}
                                         theme={theme}
+                                        activeSentence={speakingMsgId === msg.id ? speechRange : null}
+                                        disableSentenceHighlight={true}
                                         onWordPress={onWordLookup}
                                         style={{ color: isUser ? '#fff' : theme.text, fontSize: 16, lineHeight: 24 }}
                                     />
                                     
                                     {/* Action row for Assistant */}
                                     {isAssistant && (
-                                        <View style={styles.actionRow}>
-                                            <TouchableOpacity onPress={() => onTTS(msg.content, msg.id)}>
-                                                {speakingMsgId === msg.id ? <Square size={16} color="#ef4444" fill="#ef4444" /> : <Volume2 size={16} color={theme.secondary} />}
-                                            </TouchableOpacity>
-                                            
-                                            <TouchableOpacity onPress={() => onSwitchLanguage(msg)} style={styles.langBadge}>
-                                                <Text style={{ fontSize: 10, fontWeight: 'bold', color: theme.secondary }}>
-                                                    {(msgLanguages[msg.id] || displayLanguage || 'EN').substring(0,2).toUpperCase()}
-                                                </Text>
-                                            </TouchableOpacity>
+                                        <View>
+                                            <View style={styles.actionRow}>
+                                                <Text style={[styles.hintTextSmall, { color: theme.secondary }]}>tap any word to define</Text>
+                                                
+                                                <View style={styles.rightActions}>
+                                                    <TouchableOpacity onPress={() => onTTS(msg.content, msg.id)}>
+                                                        {speakingMsgId === msg.id ? <Square size={16} color="#ef4444" fill="#ef4444" /> : <Volume2 size={16} color={theme.secondary} />}
+                                                    </TouchableOpacity>
+                                                    
+                                                    <TouchableOpacity onPress={() => onSwitchLanguage(msg)} style={styles.langBadge}>
+                                                        {translatingMsgId === msg.id ? (
+                                                            <ActivityIndicator size="small" color={theme.secondary} />
+                                                        ) : (
+                                                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: theme.secondary }}>
+                                                                {(msgLanguages[msg.id] || displayLanguage || 'EN').substring(0,2).toUpperCase()}
+                                                            </Text>
+                                                        )}
+                                                    </TouchableOpacity>
 
-                                            <TouchableOpacity onPress={() => onBrainstorm(msg)}>
-                                                {brainstormingMsgId === msg.id ? <ActivityIndicator size="small" color="#f59e0b" /> : <Lightbulb size={16} color={brainstormHints[msg.id] ? "#f59e0b" : theme.secondary} />}
-                                            </TouchableOpacity>
+                                                    <TouchableOpacity onPress={() => onBrainstorm(msg)}>
+                                                        {brainstormingMsgId === msg.id ? <ActivityIndicator size="small" color="#f59e0b" /> : <Lightbulb size={16} color={brainstormHints[msg.id] ? "#f59e0b" : theme.secondary} />}
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+
+                                            {brainstormHints[msg.id] && (
+                                                <View style={[styles.hintBubble, { backgroundColor: theme.uiBg + '80', borderColor: '#f59e0b30' }]}>
+                                                    <Lightbulb size={12} color="#f59e0b" style={{ marginRight: 6, marginTop: 2 }} />
+                                                    <Text style={[styles.hintText, { color: theme.text }]}>{brainstormHints[msg.id]}</Text>
+                                                </View>
+                                            )}
                                         </View>
                                     )}
 
                                     {/* Grammar Check for User */}
                                     {isUser && (
-                                        <TouchableOpacity onPress={() => onGrammarCheck(msg)} style={styles.grammarBtn}>
-                                            <CheckCircle size={14} color="rgba(255,255,255,0.7)" />
-                                            <Text style={styles.grammarText}>check</Text>
-                                        </TouchableOpacity>
+                                        <View>
+                                            <TouchableOpacity onPress={() => onGrammarCheck(msg)} style={styles.grammarBtn}>
+                                                <CheckCircle size={14} color="rgba(255,255,255,0.7)" />
+                                                <Text style={styles.grammarText}>check</Text>
+                                            </TouchableOpacity>
+
+                                            {grammarHints[msg.id] && (
+                                                <View style={[styles.correctionBubble, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+                                                    <CheckCircle size={12} color="#fff" style={{ marginRight: 6, marginTop: 2 }} />
+                                                    <Text style={styles.correctionText}>{grammarHints[msg.id]}</Text>
+                                                </View>
+                                            )}
+                                        </View>
                                     )}
                                 </View>
                             </View>
@@ -294,9 +361,20 @@ const styles = StyleSheet.create({
     actionRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 16,
+        justifyContent: 'space-between',
         marginTop: 12,
         opacity: 0.8,
+        width: '100%',
+    },
+    hintTextSmall: {
+        fontSize: 11,
+        fontStyle: 'italic',
+        opacity: 0.7,
+    },
+    rightActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
     },
     langBadge: {
         paddingHorizontal: 6,
@@ -316,6 +394,33 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: 'rgba(255,255,255,0.7)',
         fontStyle: 'italic',
+    },
+    hintBubble: {
+        flexDirection: 'row',
+        marginTop: 12,
+        padding: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+    },
+    hintText: {
+        flex: 1,
+        fontSize: 13,
+        lineHeight: 18,
+        fontStyle: 'italic',
+    },
+    correctionBubble: {
+        flexDirection: 'row',
+        marginTop: 12,
+        padding: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    correctionText: {
+        flex: 1,
+        fontSize: 13,
+        lineHeight: 18,
+        color: '#fff',
     },
     typingContainer: {
         flexDirection: 'row',

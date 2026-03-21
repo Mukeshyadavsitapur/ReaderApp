@@ -206,6 +206,7 @@ export interface ReaderParagraph {
 export interface SpeechRange {
     start: number;
     end: number;
+    length?: number;
 }
 
 export interface LineWord {
@@ -242,6 +243,7 @@ export interface InteractiveTextProps {
     isHighlightMode?: boolean;
     onHighlightPress?: (highlight: { start: number; end: number; text: string }) => void;
     tapToDefineEnabled?: boolean;
+    disableSentenceHighlight?: boolean;
 }
 
 export interface StorageStats {

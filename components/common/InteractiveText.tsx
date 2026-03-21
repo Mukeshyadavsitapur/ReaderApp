@@ -68,7 +68,8 @@ const InteractiveText = React.memo(({
     isHighlightMode,
     highlights = [], 
     onHighlightPress,
-    tapToDefineEnabled = true 
+    tapToDefineEnabled = true,
+    disableSentenceHighlight = false
 }: InteractiveTextProps) => {
     const flatStyle: any = useMemo(() => StyleSheet.flatten(style) || {}, [style]);
 
@@ -294,7 +295,7 @@ const InteractiveText = React.memo(({
                             const globalEnd = globalStart + word.length;
 
                             let backgroundColor = 'transparent';
-                            if (activeSentence && globalStart >= activeSentence.start && globalStart < activeSentence.end) {
+                            if (!disableSentenceHighlight && activeSentence && globalStart >= activeSentence.start && globalStart < activeSentence.end) {
                                 backgroundColor = theme.activeWord;
                             }
 
@@ -392,6 +393,7 @@ const InteractiveText = React.memo(({
         prev.theme.id !== next.theme.id ||
         prev.isHighlightMode !== next.isHighlightMode ||
         prev.tapToDefineEnabled !== next.tapToDefineEnabled ||
+        prev.disableSentenceHighlight !== next.disableSentenceHighlight ||
         prevStyle.fontSize !== nextStyle.fontSize ||
         prevStyle.color !== nextStyle.color ||
         prevStyle.fontStyle !== nextStyle.fontStyle

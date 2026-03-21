@@ -13181,8 +13181,10 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                             lastBoundaryUpdate = now;
 
                             const currentBase = speechState.current.baseOffset || 0;
+                            const sStart = currentBase + globalChunkOffset + resumeOffset + event.charIndex;
                             setSpeechRange({
-                                start: currentBase + globalChunkOffset + resumeOffset + event.charIndex,
+                                start: sStart,
+                                end: sStart + (event.charLength || 0),
                                 length: event.charLength
                             });
                         }
@@ -13698,7 +13700,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
         const bounds = getSentenceBounds(readerFullText, newPos);
         const start = bounds ? bounds.start : newPos;
 
-        setSpeechRange({ start: start, length: 0 });
+        setSpeechRange({ start: start, end: start, length: 0 });
 
         // Pass Full text + offset to enable smart chunk seeking + FORCE PLAY
         speak(readerFullText, start, true, true);
@@ -13762,7 +13764,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
         target = Math.max(0, Math.min(target, readerFullText.length - 1));
 
-        setSpeechRange({ start: target, length: 0 });
+        setSpeechRange({ start: target, end: target, length: 0 });
 
         // Pass Full text + offset to enable smart chunk seeking + FORCE PLAY
         speak(readerFullText, target, true, true);
@@ -27820,6 +27822,7 @@ Review the following raw transcribed text:
                 grammarCheckingMsgId={chatbotGrammarCheckingMsgId}
                 brainstormHints={chatbotBrainstormHints}
                 grammarHints={chatbotGrammarHints}
+                speechRange={speechRange}
                 msgLanguages={chatbotMsgLanguages}
                 displayLanguage={displaySettings.language}
                 scrollRef={chatbotScrollRef}

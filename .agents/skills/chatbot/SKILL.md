@@ -1,54 +1,74 @@
 ---
-name: Chatbot Character Picker Pattern
-description: Detailed instructions and implementation patterns for the modern grid-based character selection UI in ReaderApp.
+name: Chatbot & GeminiChat Pattern
+description: Detailed instructions and implementation patterns for the Chatbot Character Picker and the GeminiChat messaging interface in ReaderApp.
 ---
 
-# Chatbot Character Picker Implementation
+# Chatbot & GeminiChat Implementation
 
 ## Overview
-The chatbot character picker is designed as a modern, 2-column grid that allows users to select from a variety of specialized AI companions. It features a premium design with vertical cards, subtle shadows, and responsive layouts.
+The Chatbot system consists of two primary states: **Character selection** (Picker) and **Active messaging** (`GeminiChat`). It is designed to be accessible from any part of the app, including the Reader.
+
+## Navigation & Transitions
+
+### 1. Unified Access (Hamburger Menu)
+When switching to Chatbot mode from the menu, the app must transition to the `idle` mode and `home` tab to render the chatbot UI.
+
+**Standard Transition Logic:**
+```tsx
+onPress={() => {
+    if (isChatbotMode) {
+        setIsChatbotMode(false);
+        if (readingSession) setAppMode('reader'); // Restore session
+    } else {
+        setAppMode('idle');
+        setActiveTab('home');
+        setIsChatbotMode(true);
+    }
+}}
+```
 
 ## Component Architecture
 
-### 1. Grid Container
-The picker uses a `ScrollView` containing a `View` that implements the 2-column grid.
-- **Styling**:
-  ```tsx
-  <View style={{ 
-      flexDirection: 'row', 
-      flexWrap: 'wrap', 
-      justifyContent: 'space-between',
-      gap: 12,
-      marginTop: 10
-  }}>
-  ```
+### 1. Chatbot Character Picker (`renderChatbotHome`)
+A 2-column grid for selecting specialized AI companions.
+- **Layout**: `width: '48%'`, `aspectRatio: 1`.
+- **Styling**: `borderRadius: 24`, `borderWidth: 1`, `theme.uiBg`.
 
-### 2. Character Card (Grid Item)
-Each character is represented by a `TouchableOpacity` card with a vertical layout.
-- **Sizing**: `width: '48%'` and `aspectRatio: 1`.
-- **Layout**: `justifyContent: 'space-between'` to anchor the icon at the top and text at the bottom.
-- **Styling**:
-  - `borderRadius: 24`
-  - Border: `borderWidth: 1`, `borderColor: theme.border`.
-  - Background: `backgroundColor: isDay ? '#ffffff' : theme.uiBg`.
-  - Shadows: `shadowOpacity: 0.03`, `shadowRadius: 4`, `elevation: 2`.
+### 2. GeminiChat Component (`GeminiChat.tsx`)
+The primary messaging interface, featuring real-time interaction and educational tools.
 
-### 3. Icon/Initial Container
-- **Standard Characters**: Balanced icon (size 24) in a circular container (`borderRadius: 16`) using `theme.highlight` background.
-- **Custom Characters**: Large initial (size 24) with bold weight.
-- **Color Logic**: Uses `char.color[0]` for icon/text color. Background uses `theme.highlight` for consistency.
+#### Message Bubbles
+- **Assistant**: Left-aligned, `theme.bubbleAI` background.
+- **User**: Right-aligned, `primaryColor` background.
+- **InteractiveText**: Used within bubbles to enable word lookups and natural reading.
 
-### 4. Text & Labels
-- **Title**: Font size 16, weight 900, with tight letter spacing.
-- **Role**: Font size 11, secondary color, opacity 0.7.
-- **Custom Badge**: A small, absolute-positioned badge for custom characters.
+#### Action Row (Assistant)
+Contains tools for **TTS** (Text-to-Speech), **Language Switching**, and **Quick Ideas** (Brainstorming).
 
-### 5. "Add New Character" Action
-The action button is integrated into the grid as a dashed-border card.
-- **Styling**: `borderStyle: 'dashed'`, `borderWidth: 1.5`, `borderColor: theme.border`.
+#### Interaction Modes
+- **Keyboard Mode**: Standard text input.
+- **Live Voice Mode**: Large mic button with recording/transcription feedback.
+
+## Advanced Features
+
+### 1. Quick Ideas (Brainstorming)
+The lightbulb icon triggers a "hint" generator that suggests the next best reply for the user.
+- **UI**: Displayed as an italicized `hintBubble` below the assistant's message.
+- **Color**: `#f59e0b` (Amber).
+
+### 2. Grammar Checker
+The "check" button on user messages triggers a correction and teaching tip.
+- **UI**: Displayed as a `correctionBubble` below the user's message.
+- **Content**: Always includes a `Corrected:` version and a `Quick Tip:`.
+
+### 3. TTS-Synced Scrolling (Follow Voice)
+The chat interface automatically scrolls to keep the currently spoken word in the viewport.
+- **Logic**: Calculates `viewPosition` on the `FlatList` based on `speechRange.start / message.length`.
+- **Manual Override**: If `onScrollBeginDrag` is triggered, the follow logic pauses to allow the user to read history.
+- **Smart Resume**: Follow logic re-enables when the user scrolls back to the bottom.
 
 ## Best Practices
-1. **Consistency**: Ensure the grid layout matches the `GeminiHome` tool grid for a unified app experience. Use `theme.uiBg` and `theme.border` for predictable results.
-2. **Visual Hierarchy**: Icons should be the primary focal point, followed by bold titles.
-3. **Touch Targets**: Maintain `48%` width and `aspectRatio: 1` to ensure easy-to-tap grid items.
-4. **Theme Adaptation**: Use `isDay` (from `theme.id === 'day'`) to pick between `#ffffff` and `theme.uiBg` for the card background.
+1. **Glassmorphism**: Use semi-transparent backgrounds (`uiBg + '80'`) for hint bubbles to maintain a premium feel.
+2. **Context Persistence**: When entering chatbot from the reader, ensure the `readingSession` is preserved so the user can "Switch to Reader" later.
+3. **Accessibility**: Always include a "PhoneOff" or "End Session" action to clear AI state and stop TTS.
+4. **Consistency**: Use `ResponsiveWrapper` to ensure the chat remains readable on tablets and larger screens.
