@@ -87,5 +87,15 @@ Buttons for "Manage all activity" and "Manage all words" follow a specific minim
     - "Manage all activity" links to the Library tab.
     - "Manage all words" links to the Dictionary tab.
 
+## Data Availability & Hydration
+
+The side menu relies on `chatSessions` (Recent Activity) and `recentSearches` (Vocabulary) being populated to show relevant history.
+
+### Startup Loading
+To ensure "Recent Activity" is visible immediately after an app refresh/reload (before the user visits the Library tab):
+- **Background Hydration**: The app must trigger a background load of session metadata on startup.
+- **Implementation**: Call `loadLibraryPage()` (or equivalent metadata fetcher) within a global `useEffect` that runs on mount.
+- **Vocabulary Recovery**: Ensure `recentSearches` is loaded from persistent storage (FileSystem/AsyncStorage) during the initial sanitization phase.
+
 ## Reference Files
-- [app/index.tsx](file:///e:/ReaderAppGit/app/index.tsx) - Main implementation including `sideMenuAnim` and JSX structure.
+- [app/index.tsx](file:///e:/ReaderAppGit/app/index.tsx) - Main implementation including `sideMenuAnim`, `renderSideMenu`, and startup `useEffect` with `loadLibraryPage()`.

@@ -6845,6 +6845,14 @@ export default function App() {
                     recentSearchesRef.current = []; // Fix: Sync ref on crash clear
                 }
             }
+
+            // NEW: Background load session metadata for Side Menu "Recent Activity"
+            // This ensures history is visible even if user doesn't visit Library tab first.
+            try {
+                loadLibraryPage();
+            } catch (le) {
+                console.error("Background library load failed", le);
+            }
         };
         sanitizeRecentSearches();
     }, []);
