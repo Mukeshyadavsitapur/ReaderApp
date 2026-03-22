@@ -5246,6 +5246,20 @@ export default function App() {
     const [chatbotMessages, setChatbotMessages] = useState<Message[]>([]);
     const [activeChatbotChar, setActiveChatbotChar] = useState<any>(null);
     const chatbotSilenceTimer = useRef<any>(null);
+    const speechState = useRef<any>({
+        chunks: [],
+        index: 0,
+        offsets: [],
+        isActive: false,
+        isPaused: false,
+        resumeOffsetInChunk: 0,
+        baseOffset: 0,
+        title: "Audio",
+        pendingDownloads: new Set(),
+        lastSpeaker: "Narrator"
+    });
+    const speechSessionId = useRef(0);
+    const currentSound = useRef<any>(null);
     const chatbotVolumeRef = useRef<number>(0);
     const [isChatbotTyping, setIsChatbotTyping] = useState(false);
     const [isChatbotInputExpanded, setIsChatbotInputExpanded] = useState(false);
@@ -5272,8 +5286,7 @@ export default function App() {
     const [quizPassword, setQuizPassword] = useState<any>(""); // NEW: Password State
     const [quizUnlockInput, setQuizUnlockInput] = useState<any>(""); // NEW: Unlock Input State
     const [isReviewUnlocked, setIsReviewUnlocked] = useState<any>(false); // NEW: Lock State
-    const [audioFiles, setAudioFiles] = useState<any[]>([]);
-    const [isAudioLoading, setIsAudioLoading] = useState<any>(false);
+
     const [wordData, setWordData] = useState<any>(null);
     const [isDefining, setIsDefining] = useState<any>(false);
 
@@ -5401,7 +5414,7 @@ export default function App() {
     const [storageStats, setStorageStats] = useState<any>({ free: 0, used: 0, audio: 0 }); // UPDATED: Added audio field
 
     // NEW: Track specific audio item export state to block UI
-    const [isExportingAudioId, setIsExportingAudioId] = useState<any>(null);
+
 
     // Restored State Variables
     const [appMode, setAppMode] = useState("idle");
@@ -5732,7 +5745,7 @@ export default function App() {
     // NEW: Ref for Persistent Quiz History (Survives Deletion)
     const quizHistoryRef = useRef<any>({});
     // NEW: Ref for Active Audio Queue (Playlist within a chapter)
-    const activeAudioQueue = useRef({ uris: [], index: 0, itemId: null });
+
 
     // NEW: Helper to get or create a persistent Device/Installation ID
     const getInstallationId = async () => {
@@ -6919,7 +6932,6 @@ export default function App() {
             // Check if we are playing an orphan file (Library Audio)
             if (playingMeta?.id && playingMeta.id.startsWith('orphan_')) {
                 const originalId = playingMeta.id.replace('orphan_', '');
-                handleAudioTrackFinished(originalId);
                 setTtsFinishedNaturally(0);
                 return;
             }
@@ -6955,13 +6967,6 @@ export default function App() {
     const [ttsDownloadProgress, setTtsDownloadProgress] = useState(0);
     const [isOnlinePlayback, setIsOnlinePlayback] = useState(false);
     const [audioProgress, setAudioProgress] = useState({ position: 0, duration: 1 });
-    const isAudioPlaylistActive = useRef(false);
-    const audioPlaylistDirection = useRef('up');
-    const audioSessionHistory = useRef(new Set<any>());
-    const speechState = useRef<any>({ chunks: [], index: 0, offsets: [], isActive: false, isPaused: false, resumeOffsetInChunk: 0, baseOffset: 0, id: 0, title: "", pendingDownloads: new Set() });
-    const speechSessionId = useRef(0);
-    const audioPlaybackId = useRef(0); // NEW: Track audio file playback sessions to prevent overlap
-    const currentSound = useRef<any>(null);
     const onlineTTSBroken = useRef(false);
     const [showAppearance, setShowAppearance] = useState(false);
     const [isThemeSelectorOpen, setIsThemeSelectorOpen] = useState(false);
@@ -7086,7 +7091,7 @@ export default function App() {
     const [storyMode, setStoryMode] = useState('narrator');
     const [teacherMode, setTeacherMode] = useState('lesson'); // RESTORED
     const [expandedStoryGroups, setExpandedStoryGroups] = useState<any>({}); // NEW: State for expanding/collapsing story groups
-    const [expandedAudioGroups, setExpandedAudioGroups] = useState<any>({}); // NEW: State for expanding/collapsing audio groups
+
     // FIXED: Added missing state for Journal Groups
     const [expandedJournalGroups, setExpandedJournalGroups] = useState<any>({});
 
@@ -7517,9 +7522,7 @@ export default function App() {
                 if (!a.pinned && b.pinned) return 1;
                 return (b.timestamp || '').localeCompare(a.timestamp || '');
             });
-        } else if (libraryTab === 'audio') {
-            // Audio files are permanent delete only
-            return audioFiles;
+
         } else if (libraryTab === 'questions') {
             if (questionsViewMode === 'quizzes') {
                 return (Object.values(chatSessions || {}) as any[])
@@ -7586,7 +7589,7 @@ export default function App() {
             }
         }
         return [];
-    }, [libraryTab, chatSessions, librarySearchQuery, audioFiles, questionsViewMode, savedQuestions, savedWords, customTools]);
+    }, [libraryTab, chatSessions, librarySearchQuery, questionsViewMode, savedQuestions, savedWords, customTools]);
 
     // FIX: Removed duplicate 'const recentSearchesRef' declaration here.
     // It is already declared at the top of the App component.
@@ -8419,10 +8422,7 @@ export default function App() {
         setupAudio();
 
         return () => {
-            if (currentSound.current) {
-                currentSound.current.remove();
-                currentSound.current = null;
-            }
+
             Speech.stop();
         };
     }, []);
@@ -10108,383 +10108,13 @@ export default function App() {
         return map;
     }, [chatSessions, displaySettings.voice]); // Re-run if sessions or global voice changes
 
-    // NEW: Function to load audio files from file system for the Audio Tab
-    const loadAudioFiles = useCallback(async () => {
-        setIsAudioLoading(true);
-        try {
-            const docDir = (fs.documentDirectory || FileSystem.documentDirectory) || "";
-            const files = await fs.readDirectoryAsync(docDir);
-            const ttsFiles = files.filter(f => f.startsWith('tts_') && f.endsWith('.wav'));
 
-            // Use the MEMOIZED hash map instead of rebuilding it here
-            const hashMap = ttsHashMap;
 
-            const fileDataPromises = ttsFiles.map(async (filename) => {
-                const uri = docDir + filename;
-                const info = await fs.getInfoAsync(uri);
 
-                const rawName = filename.replace('.wav', '');
-                const parts = rawName.split('_');
-
-                const hash = parts[1];
-                let fileTitle = null;
-
-                if (parts.length > 2) {
-                    // NEW: Smarter reconstruction to preserve "Book: Chapter" structure from filenames
-                    const titleParts = parts.slice(2);
-                    let reconstructed = "";
-
-                    for (let i = 0; i < titleParts.length; i++) {
-                        const p = titleParts[i];
-                        if (p === "") {
-                            if (reconstructed.length > 0 && !reconstructed.endsWith(": ")) {
-                                reconstructed = reconstructed.trim() + ": ";
-                            }
-                        } else {
-                            reconstructed += p + " ";
-                        }
-                    }
-                    fileTitle = reconstructed.trim();
-                }
-
-                const match = (hashMap as any)[hash];
-                const displayTitle = match ? match.title : (fileTitle || "Unknown Recording");
-
-                return {
-                    id: filename,
-                    uri: uri,
-                    filename: filename,
-                    size: (info as any).size,
-                    modificationTime: (info as any).modificationTime || Date.now() / 1000,
-                    matchedTitle: displayTitle,
-                    sessionId: match ? match.id : null,
-                    partInfo: match && match.total > 1 && !match.isMerged ? `Part ${match.part}` : null,
-                    partIndex: match ? match.part : 0,
-                    isMerged: match ? match.isMerged : false
-                };
-            });
-
-            const rawFiles = await Promise.all(fileDataPromises);
-
-            const groups: any = {};
-            const ungrouped: any[] = [];
-
-            rawFiles.forEach(file => {
-                if (file.sessionId) {
-                    if (!groups[file.sessionId]) {
-                        groups[file.sessionId] = {
-                            id: file.sessionId,
-                            isGroup: true,
-                            title: file.matchedTitle,
-                            files: [],
-                            totalSize: 0,
-                            modificationTime: 0,
-                            sessionId: file.sessionId,
-                            matchedTitle: file.matchedTitle
-                        };
-                    }
-                    groups[file.sessionId].files.push(file);
-                    groups[file.sessionId].totalSize += file.size;
-                    if (file.modificationTime > groups[file.sessionId].modificationTime) {
-                        groups[file.sessionId].modificationTime = file.modificationTime;
-                    }
-                } else {
-                    ungrouped.push(file);
-                }
-            });
-
-            // Sort files within groups (Merged files first, then chunks)
-            Object.values(groups).forEach((group: any) => {
-                group.files.sort((a: any, b: any) => {
-                    if (a.isMerged && !b.isMerged) return -1;
-                    if (!a.isMerged && b.isMerged) return 1;
-                    return a.partIndex - b.partIndex;
-                });
-
-                // If group contains a merged file, hide the chunks to avoid duplication in playback
-                if (group.files.some((f: any) => f.isMerged)) {
-                    group.files = group.files.filter((f: any) => f.isMerged);
-                }
-            });
-
-            const groupedList = Object.values(groups);
-
-            // --- NEW: Group by Book Title & Sort Ascending ---
-            const bookGroups: any = {};
-            const standaloneAudio: any[] = [];
-
-            // Helper to get title
-            const getTitle = (item: any) => item.matchedTitle || "Unknown";
-
-            (groupedList.concat(ungrouped) as any[]).forEach((item: any) => {
-                const title = getTitle(item);
-                const sepIdx = title.indexOf(':');
-
-                if (sepIdx > 0) {
-                    const bookTitle = title.substring(0, sepIdx).trim();
-                    if (!bookGroups[bookTitle]) {
-                        bookGroups[bookTitle] = {
-                            id: `book_audio_${simpleHash(bookTitle)}`,
-                            title: bookTitle,
-                            isBook: true,
-                            chapters: [],
-                            totalSize: 0,
-                            modificationTime: 0
-                        };
-                    }
-                    bookGroups[bookTitle].chapters.push(item);
-                    bookGroups[bookTitle].totalSize += (item.totalSize || item.size);
-                    // Keep latest time
-                    if (item.modificationTime > bookGroups[bookTitle].modificationTime) {
-                        bookGroups[bookTitle].modificationTime = item.modificationTime;
-                    }
-                } else {
-                    standaloneAudio.push(item);
-                }
-            });
-
-            const finalAudioList = [];
-
-            // Sort Book Groups A-Z
-            const sortedBooks = Object.values(bookGroups).sort((a: any, b: any) => a.title.localeCompare(b.title));
-
-            sortedBooks.forEach((book: any) => {
-                // Sort Chapters A-Z (or try to detect number)
-                book.chapters.sort((a: any, b: any) => {
-                    const tA = getTitle(a);
-                    const tB = getTitle(b);
-                    return tA.localeCompare(tB, undefined, { numeric: true, sensitivity: 'base' });
-                });
-                finalAudioList.push(book);
-            });
-
-            // Sort Standalone A-Z
-            standaloneAudio.sort((a: any, b: any) => getTitle(a).localeCompare(getTitle(b), undefined, { numeric: true, sensitivity: 'base' }));
-
-            finalAudioList.push(...standaloneAudio);
-
-            setAudioFiles(finalAudioList);
-
-        } catch (e) {
-            console.error("Error loading audio files", e);
-        } finally {
-            setIsAudioLoading(false);
-        }
-    }, [chatSessions, displaySettings.voice]);
-
-    // NEW: Helper to play next file in the active queue (Multi-part support)
-    const playNextInQueue = async (explicitId: number | null = null) => {
-        // Use explicit ID if passed (new request), otherwise use current (internal continuation)
-        const currentId = explicitId !== null ? explicitId : audioPlaybackId.current;
-
-        // Check if a newer request has come in since this was queued
-        if (currentId !== audioPlaybackId.current) return;
-
-        const { uris, index, itemId } = activeAudioQueue.current;
-
-        // If queue finished, trigger next Library Item
-        if (index >= uris.length) {
-            if (itemId) handleAudioTrackFinished(itemId);
-            return;
-        }
-
-        const uri = uris[index];
-
-        try {
-            // NEW: Ensure any active Native TTS is stopped
-            Speech.stop();
-
-            if (currentSound.current) {
-                try {
-                    currentSound.current.pause(); // Explicitly pause
-                    currentSound.current.remove();
-                } catch (e: any) { }
-                currentSound.current = null;
-            }
-
-            // Check again before expensive load
-            if (currentId !== audioPlaybackId.current) return;
-
-            // IMPROVEMENT: Explicitly set audio mode to stay active in background before playing
-            // This helps persist playback on Android when screen turns off
-            try {
-                await setAudioModeAsync({
-                    allowsRecording: false,
-                    shouldPlayInBackground: true,
-                    playsInSilentMode: true,
-                    interruptionMode: 'duckOthers',
-                    shouldRouteThroughEarpiece: false,
-                });
-            } catch (modeErr) {
-                console.warn("Background Audio Config Error:", modeErr);
-            }
-
-            const player = createAudioPlayer(uri);
-            const actualRate = displaySettings.ttsRate || 1.0;
-
-            // Try setting shouldCorrectPitch directly on the player object
-            try {
-                (player as any).shouldCorrectPitch = true;
-            } catch (e) {
-                console.log('[TTS Debug] Could not set shouldCorrectPitch property:', e);
-            }
-
-            console.log(`[TTS Debug] Setting playback rate to: ${actualRate}`);
-            player.setPlaybackRate(actualRate);
-
-            // Log actual player properties for debugging
-            console.log('[TTS Debug] Player properties:', {
-                playbackRate: (player as any).playbackRate,
-                shouldCorrectPitch: (player as any).shouldCorrectPitch
-            });
-
-            // CRITICAL: Check race condition again after await. 
-            // If user clicked another file while this was loading, stop immediately.
-            if (currentId !== audioPlaybackId.current) {
-                player.remove();
-                return;
-            }
-
-            // Expo Audio doesn't have an async loading state in the same way, it's ready or it emits events
-            currentSound.current = player;
-            setTtsStatus('playing');
-            setIsOnlinePlayback(true);
-
-            (player as any).addListener('statusChange', (status: any) => {
-                if (status === 'playing' || status === 'paused') {
-                    setAudioProgress({ position: player.currentTime * 1000, duration: (player.duration || 0.001) * 1000 });
-                }
-                if (status === 'finished') {
-                    // Move to next file in queue
-                    activeAudioQueue.current.index += 1;
-                    playNextInQueue(); // No explicit ID needed for continuation
-                }
-            });
-
-            player.play();
-
-        } catch (e) {
-            console.log("Error playing queue file", e);
-            // Skip error file and try next
-            activeAudioQueue.current.index += 1;
-            playNextInQueue(currentId);
-        }
-    };
 
     // NEW: Handler for when a track finishes (Orphan or Session)
-    const handleAudioTrackFinished = (finishedItemId: string) => {
-        if (!isAudioPlaylistActive.current) return;
-
-        // 1. Create a flattened list of all playable audio items for simple indexing
-        // This includes chapters inside books and standalone files
-        const playlist: any[] = [];
-        audioFiles.forEach((item: any) => {
-            if (item.isBook && item.chapters) {
-                item.chapters.forEach((chapter: any) => playlist.push(chapter));
-            } else {
-                playlist.push(item);
-            }
-        });
-
-        // 2. Find current index in this flattened playlist
-        const index = playlist.findIndex((f: any) => f.id === finishedItemId);
-        if (index === -1) {
-            isAudioPlaylistActive.current = false;
-            return;
-        }
-
-        // 3. Move to the next item
-        const nextIndex = index + 1;
-
-        if (nextIndex < playlist.length) {
-            // Play next item
-            const nextItem = playlist[nextIndex];
-            // Add small delay for natural transition
-            setTimeout(() => {
-                showToast(`Next: ${nextItem.matchedTitle || "Unknown"}`);
-                playLibraryItem(nextItem, false); // isManual = false (maintains playlist mode)
-            }, 1500);
-        } else {
-            showToast("End of playlist");
-            isAudioPlaylistActive.current = false;
-            audioSessionHistory.current.clear();
-        }
-    };
-
-    // NEW: Unified Handler to play audio items from Library and manage auto-play
-    const playLibraryItem = async (item: any, isManual = false) => {
-        // Stop Everything First
-        try {
-            Speech.stop();
-            if (currentSound.current) {
-                currentSound.current.pause();
-                currentSound.current.remove();
-                currentSound.current = null;
-            }
-        } catch (e) { }
-
-        // Increment Playback ID to invalidate any pending loads from previous clicks
-        audioPlaybackId.current += 1;
-        const newPlaybackId = audioPlaybackId.current;
-
-        // Manage Playlist State
-        if (isManual) {
-            isAudioPlaylistActive.current = true;
-            audioSessionHistory.current.clear();
-        } else {
-            isAudioPlaylistActive.current = true;
-        }
-
-        // Add to history
-        audioSessionHistory.current.add(item.id);
-
-        // 1. Prepare Queue
-        let uris = [];
-        if (item.isGroup) {
-            uris = item.files.map((f: any) => f.uri);
-        } else {
-            uris = [item.uri];
-        }
-
-        // Set Global Queue
-        activeAudioQueue.current = { uris, index: 0, itemId: item.id };
-
-        // 2. Determine Display Info
-        let targetTitle = item.matchedTitle || "Unknown Recording";
-        // If session exists in memory, use its title for better formatting
-        if ((chatSessions as any)[item.sessionId]) {
-            targetTitle = (chatSessions as any)[item.sessionId].title;
-        }
-
-        // 3. Construct Dummy "Orphan" Session
-        const targetId = `orphan_${item.id}`;
-
-        const targetSession = {
-            id: targetId,
-            title: targetTitle,
-            messages: [{ role: 'ai', content: "" }], // No text content
-            toolId: 'orphan_audio', // Force Audio UI
-            timestamp: new Date(item.modificationTime * 1000).toISOString(),
-            hasAudio: true
-        };
-
-        setPlayingMeta({ id: targetId, title: targetTitle });
-
-        // 4. Start Playback with new ID
-        playNextInQueue(newPlaybackId);
-
-        // 5. Load UI
-        setNavOrigin('library');
-        setReadingSession(targetSession);
-        setAppMode('reader');
-    };
-
     // Trigger load when switching to Audio tab
-    useEffect(() => {
-        if (activeTab === 'library' && libraryTab === 'audio') {
-            loadAudioFiles();
-        }
-    }, [activeTab, libraryTab, loadAudioFiles]);
+
 
     // UPDATED: Async loader to handle external file content
     const loadHistorySession = async (session: any, origin = 'idle') => {
@@ -10613,16 +10243,7 @@ export default function App() {
                 const docDir = fs.documentDirectory || FileSystem.documentDirectory;
                 // Ensure audioFile property exists
                 if (loadedSession.audioFile) {
-                    const fullUri = docDir + loadedSession.audioFile;
-                    const playItem = {
-                        id: loadedSession.id,
-                        uri: fullUri,
-                        matchedTitle: loadedSession.title,
-                        modificationTime: new Date(loadedSession.timestamp).getTime() / 1000,
-                        sessionId: loadedSession.id, // Link back to session
-                        isGroup: false
-                    };
-                    playLibraryItem(playItem, true);
+                    // [REMOVED] Online TTS playLibraryItem call removed
                     return;
                 }
             }
@@ -13046,7 +12667,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
             // Stop any existing
             if (currentSound.current) {
                 try { currentSound.current.pause(); } catch (e) { }
-                currentSound.current = null;
             }
             Speech.stop();
 
@@ -13099,10 +12719,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
         speechState.current.isPaused = false;
         setIsTtsDownloading(false);
 
-        if (currentSound.current) {
-            try { currentSound.current.pause(); } catch (e) { }
-            currentSound.current = null;
-        }
 
         Speech.stop();
         setSpeechRange(null);
@@ -13152,10 +12768,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
         // NEW: Handle Orphan Audio Seeking (Time based)
         if (readingSession?.toolId === 'orphan_audio' || readingSession?.hasAudio) {
-            if (currentSound.current) {
-                currentSound.current.seekTo(newPos / 1000);
-                setAudioProgress(prev => ({ ...prev, position: newPos }));
-            }
             return;
         }
 
@@ -13196,19 +12808,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
         // NEW: Handle Orphan Audio Jumping (Time based +/- 10s)
         if (readingSession?.toolId === 'orphan_audio' || readingSession?.hasAudio) {
-            if (currentSound.current) {
-                const player = currentSound.current;
-                const currentSeconds = player.currentTime;
-                const durationSeconds = player.duration;
-
-                let newPos = currentSeconds + (direction === 'next' ? 10 : -10); // 10 seconds
-                // Clamp
-                if (newPos < 0) newPos = 0;
-                if (newPos > durationSeconds) newPos = durationSeconds;
-
-                player.seekTo(newPos);
-                setAudioProgress(prev => ({ ...prev, position: newPos * 1000 }));
-            }
             return;
         }
 
@@ -16561,6 +16160,8 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
     // NEW: Handle Import All Data (Restore Backup)
     const handleImportAllData = async () => {
+        let sessionsToImport = [];
+        let wordsToImport = [];
         try {
             const result = await DocumentPicker.getDocumentAsync({
                 type: ['application/json', 'public.json'],
@@ -16583,26 +16184,12 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                     return;
                 }
 
-                // UPDATED: Handle both Legacy (Array) and New (Object) formats
-                let sessionsToImport = [];
-                let dictionaryToImport = [];
-                let audioToImport = [];
-
                 if (Array.isArray(importedData)) {
-                    // Legacy Format: Just an array of sessions
-                    sessionsToImport = importedData;
-                } else if (importedData && typeof importedData === 'object') {
-                    // New Format: { sessions: [], dictionary: [], audio: [] }
-                    if (importedData.sessions && Array.isArray(importedData.sessions)) {
-                        sessionsToImport = importedData.sessions;
-                    }
-                    if (importedData.dictionary && Array.isArray(importedData.dictionary)) {
-                        dictionaryToImport = importedData.dictionary;
-                    }
-                    // NEW: Check for Audio
-                    if (importedData.audio && Array.isArray(importedData.audio)) {
-                        audioToImport = importedData.audio;
-                    }
+                    sessionsToImport = importedData.filter(i => i.toolId);
+                    wordsToImport = importedData.filter(i => i.word);
+                } else if (importedData.sessions || importedData.words) {
+                    sessionsToImport = importedData.sessions || [];
+                    wordsToImport = importedData.words || [];
                 } else {
                     Alert.alert("Invalid Data", "The file structure is not recognized.");
                     return;
@@ -16614,41 +16201,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                 let addedAudioCount = 0;
                 const docDir = fs.documentDirectory || FileSystem.documentDirectory;
 
-                // --- 1. Import Audio FIRST (Moved up to allow linking) ---
-                // Maintain a set of available files to check against when importing sessions
-                const availableAudioFiles = new Set();
 
-                // Populate with existing files first
-                try {
-                    if (!docDir) throw new Error("No docDir");
-                    const existing = await fs.readDirectoryAsync(docDir);
-                    existing.forEach(f => {
-                        if (f.startsWith('tts_') && f.endsWith('.wav')) availableAudioFiles.add(f);
-                    });
-                } catch (e: any) { }
-
-                if (audioToImport.length > 0) {
-                    showToast(`Restoring ${audioToImport.length} Audio Files...`);
-                    await new Promise(r => setTimeout(r, 100)); // Yield UI
-
-                    for (const audioFile of audioToImport) {
-                        if (audioFile.name && audioFile.data) {
-                            try {
-                                const uri = docDir + audioFile.name;
-                                await fs.writeAsStringAsync(uri, audioFile.data, { encoding: fs.EncodingType.Base64 });
-                                addedAudioCount++;
-                                availableAudioFiles.add(audioFile.name);
-                            } catch (e: any) {
-                                console.warn("Failed to restore audio file", audioFile.name);
-                            }
-                        }
-                    }
-
-                    // Refresh the Audio Library list if we are on that tab
-                    if (activeTab === 'library' && libraryTab === 'audio') {
-                        loadAudioFiles();
-                    }
-                }
 
                 // --- 2. Import Sessions ---
                 const newSessionsMap: any = {};
@@ -16694,20 +16247,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                             }
                         }
 
-                        // NEW: Auto-Link Audio
-                        // Check if valid audio exists for this session's content
-                        if (msgContent) {
-                            const cleanText = cleanTextForDisplay(msgContent);
-                            const hash = simpleHash(cleanText + currentVoice);
-                            const safeTitle = getSafeFileName(session.title);
-                            const expectedName = `tts_${hash}_${safeTitle}.wav`;
-                            const oldName = `tts_${hash}.wav`;
 
-                            if (availableAudioFiles.has(expectedName) || availableAudioFiles.has(oldName)) {
-                                sessionToSave.hasAudio = true;
-                                session.hasAudio = true; // Update in-memory object too
-                            }
-                        }
 
                         // Prepare State Object (Full content for immediate UI update)
                         newSessionsMap[session.id] = session;
@@ -16725,7 +16265,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
                 // --- 3. Import Dictionary ---
                 let newDictionaryList = [...recentSearches];
-                if (dictionaryToImport.length > 0) {
+                if (wordsToImport.length > 0) {
                     const currentWordMap = new Map(recentSearches.map(item => {
                         const w = typeof item === 'string' ? item : item.word;
                         return [w.toLowerCase(), true];
@@ -17447,10 +16987,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                         await AsyncStorage.setItem('session_index', JSON.stringify(currentIndex));
                     }
 
-                    // Reload Audio if needed
-                    if (activeTab === 'library' && libraryTab === 'audio') {
-                        loadAudioFiles();
-                    }
+
 
                     let msg = `Successfully imported ${importedCount} items.`;
                     if (duplicateCount > 0) msg += `\n(${duplicateCount} duplicates skipped)`;
@@ -17471,207 +17008,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
     const handleLibraryBatchExport = async () => {
         if (selectedLibraryIds.length === 0) return;
 
-        // UPDATED: Audio Batch Export Support with Deep Search
-        if (libraryTab === 'audio') {
-            if (Platform.OS === 'android') {
-                try {
-                    // 1. Collect all files to export
-                    const itemsToExport: any[] = []; // Array of objects { name, uri?, parts? }
-
-                    // Helper to recursively find and collect files
-                    const processAudioItem = (item: any) => {
-                        // NEW: Recursively handle Book Groups
-                        if (item.isBook && item.chapters) {
-                            item.chapters.forEach((c: any) => processAudioItem(c));
-                            return;
-                        }
-
-                        let niceName = item.matchedTitle || "Audio";
-                        niceName = niceName.replace(/:/g, ' - ').replace(/[^a-zA-Z0-9 \-_]/g, '').trim().substring(0, 60);
-                        if (!niceName) niceName = "Audio";
-
-                        if (item.isGroup && item.files.length > 1) {
-                            // Needs merging
-                            itemsToExport.push({
-                                name: `${niceName}.wav`,
-                                parts: item.files.map((f: any) => f.uri)
-                            });
-                        } else {
-                            // Single file (Orphan or Group with 1 file)
-                            let uri = null;
-                            if (item.isGroup && item.files.length > 0) uri = item.files[0].uri;
-                            else if (item.uri) uri = item.uri;
-
-                            if (uri) {
-                                itemsToExport.push({
-                                    name: `${niceName}.wav`,
-                                    uri: uri
-                                });
-                            }
-                        }
-                    };
-
-                    for (const id of selectedLibraryIds) {
-                        // Find item at top level OR nested in books
-                        let item = audioFiles.find((f: any) => f.id === id);
-
-                        if (item) {
-                            // Found at top level (could be File, Group, or Book)
-                            processAudioItem(item);
-                        } else {
-                            // Not at top level, search inside Books for individual chapter selection
-                            for (const top of audioFiles) {
-                                if (top.isBook && top.chapters) {
-                                    const found = top.chapters.find((c: any) => c.id === id);
-                                    if (found) {
-                                        processAudioItem(found);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (itemsToExport.length === 0) return;
-
-                    showToast(`Preparing ${itemsToExport.length} audio files...`);
-                    // Yield for toast
-                    await new Promise(r => setTimeout(r, 100));
-
-                    // 2. Get Directory Permission
-                    const savedDir = await AsyncStorage.getItem('savedExportDirectory');
-                    let targetDir = savedDir;
-
-                    const verifyDir = async (uri: string) => {
-                        try {
-                            const testUri = await fs.StorageAccessFramework.createFileAsync(uri, "test_perm_check", "text/plain");
-                            await fs.deleteAsync(testUri);
-                            return true;
-                        } catch (e: any) { return false; }
-                    };
-
-                    let hasPermission = false;
-                    if (targetDir) {
-                        hasPermission = await verifyDir(targetDir);
-                    }
-
-                    if (!hasPermission) {
-                        const permissions = await fs.StorageAccessFramework.requestDirectoryPermissionsAsync();
-                        if (permissions.granted) {
-                            targetDir = permissions.directoryUri;
-                            await AsyncStorage.setItem('savedExportDirectory', targetDir);
-                            hasPermission = true;
-                        }
-                    }
-
-                    if (!hasPermission) {
-                        Alert.alert("Permission Denied", "Cannot save files without folder access.");
-                        return;
-                    }
-                    if (!targetDir) return;
-
-                    // 3. Save Loop
-                    let successCount = 0;
-                    const total = itemsToExport.length;
-
-                    // NEW: Track used names in this batch to prevent OS file extension corruption (e.g. file.wav(1))
-                    const usedNames = new Set();
-
-                    for (let i = 0; i < total; i++) {
-                        const exportItem = itemsToExport[i];
-                        try {
-                            let base64ToWrite = null;
-
-                            if (exportItem.parts) {
-                                // MERGE LOGIC
-                                const parts = [];
-                                let totalLength = 0;
-                                let firstHeader = null;
-
-                                for (let j = 0; j < exportItem.parts.length; j++) {
-                                    const fUri = exportItem.parts[j];
-                                    const b64 = await fs.readAsStringAsync(fUri, { encoding: fs.EncodingType.Base64 });
-                                    const bytes = decodeBase64(b64);
-                                    if (bytes.length < 44) continue;
-
-                                    if (j === 0) {
-                                        firstHeader = bytes.slice(0, 44);
-                                        const data = bytes.slice(44);
-                                        parts.push(data);
-                                        totalLength += data.length;
-                                    } else {
-                                        const data = bytes.slice(44);
-                                        parts.push(data);
-                                        totalLength += data.length;
-                                    }
-                                }
-
-                                if (parts.length > 0 && firstHeader) {
-                                    const mergedBuffer = new Uint8Array(44 + totalLength);
-                                    mergedBuffer.set(firstHeader, 0);
-
-                                    let offset = 44;
-                                    for (const part of parts) {
-                                        mergedBuffer.set(part, offset);
-                                        offset += part.length;
-                                    }
-
-                                    const view = new DataView(mergedBuffer.buffer);
-                                    view.setUint32(4, 36 + totalLength, true);
-                                    view.setUint32(40, totalLength, true);
-
-                                    base64ToWrite = encodeBase64(mergedBuffer);
-                                }
-                            } else {
-                                // Single File
-                                base64ToWrite = await fs.readAsStringAsync(exportItem.uri, { encoding: fs.EncodingType.Base64 });
-                            }
-
-                            if (base64ToWrite) {
-                                // NEW: Ensure filename uniqueness
-                                let finalName = exportItem.name;
-                                const baseName = finalName.replace(/\.wav$/i, '');
-                                let counter = 1;
-
-                                // If name exists in this batch, append counter
-                                while (usedNames.has(finalName)) {
-                                    finalName = `${baseName}_${counter}.wav`;
-                                    counter++;
-                                }
-                                usedNames.add(finalName);
-
-                                const newFileUri = await fs.StorageAccessFramework.createFileAsync(targetDir, finalName, 'audio/wav');
-                                await fs.writeAsStringAsync(newFileUri, base64ToWrite, { encoding: fs.EncodingType.Base64 });
-                                successCount++;
-                                if (i % 3 === 0) showToast(`Saved ${i + 1} of ${total}...`);
-
-                                // Clean up memory
-                                base64ToWrite = null;
-                            }
-                        } catch (e: any) {
-                            console.log(`Failed to save ${exportItem.name}`, e);
-                        }
-                    }
-
-                    if (successCount > 0) {
-                        setIsLibrarySelectionMode(false);
-                        setSelectedLibraryIds([]);
-                        Alert.alert("Export Complete", `Successfully saved ${successCount} audio files.`);
-                    } else {
-                        Alert.alert("Export Failed", "Could not save files.");
-                    }
-
-                } catch (e: any) {
-                    console.error("Audio Batch Export Error", e);
-                    Alert.alert("Error", "Batch export failed.");
-                }
-                return;
-            } else {
-                // iOS Fallback -> Reuse Share Logic (Loops Share Sheet)
-                handleLibraryBatchShare();
-                return;
-            }
-        }
 
         if (Platform.OS === 'android') {
             try {
@@ -17748,72 +17084,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
         if (selectedLibraryIds.length === 0) return;
 
         // Audio Tab sharing logic (Keep loop as merging binary is complex)
-        if (libraryTab === 'audio') {
-            // ... (Audio share logic remains same as it handles binary files separately) ...
-            try {
-                let filesToShare: string[] = [];
 
-                // Helper to collect URIs recursively
-                const collectUris = (item: any) => {
-                    if (item.uri) {
-                        filesToShare.push(item.uri);
-                    } else if (item.files) {
-                        item.files.forEach((f: any) => filesToShare.push(f.uri));
-                    } else if (item.chapters) {
-                        item.chapters.forEach((c: any) => collectUris(c));
-                    }
-                };
-
-                for (const id of selectedLibraryIds) {
-                    // Search top level
-                    let item = audioFiles.find(f => f.id === id);
-
-                    // If not found, search inside books
-                    if (!item) {
-                        for (const top of audioFiles) {
-                            if (top.isBook && top.chapters) {
-                                const found = top.chapters.find((c: any) => c.id === id);
-                                if (found) {
-                                    item = found;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (item) {
-                        collectUris(item);
-                    }
-                }
-
-                if (filesToShare.length === 0) return;
-
-                // Remove duplicates just in case
-                filesToShare = [...new Set(filesToShare)];
-
-                if (filesToShare.length === 1) {
-                    await Sharing.shareAsync(filesToShare[0]);
-                } else {
-                    Alert.alert("Share Multiple", `Sharing ${filesToShare.length} audio files will open multiple dialogs. Continue?`, [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                            text: "Share All", onPress: async () => {
-                                for (const uri of filesToShare) {
-                                    await Sharing.shareAsync(uri);
-                                    // Small delay to prevent OS overload
-                                    await new Promise(r => setTimeout(r, 800));
-                                }
-                            }
-                        }
-                    ]);
-                }
-                setIsLibrarySelectionMode(false);
-                setSelectedLibraryIds([]);
-            } catch (e) {
-                Alert.alert("Error", "Could not share audio.");
-            }
-            return;
-        }
 
         // Text Content Sharing (Notes/Journals/Quizzes) -> Share as Unified JSON Array
 
@@ -18020,68 +17291,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
     const handleLibraryBatchPin = async () => {
         if (selectedLibraryIds.length === 0) return;
 
-        if (libraryTab === 'audio') {
-            // Audio Mode Pinning logic
-            const sessionIdsToPin: string[] = [];
 
-            // Map selected ids to session IDs
-            selectedLibraryIds.forEach(id => {
-                // Deep Search for Item
-                let item = audioFiles.find(f => f.id === id);
-                if (!item) {
-                    for (const top of audioFiles) {
-                        if (top.isBook && top.chapters) {
-                            const found = top.chapters.find((c: any) => c.id === id);
-                            if (found) {
-                                item = found;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // Extract Session IDs
-                if (item) {
-                    const collectSessionIds = (obj: any) => {
-                        if (obj.sessionId) sessionIdsToPin.push(obj.sessionId);
-                        if (obj.files) obj.files.forEach((f: any) => { if (f.sessionId) sessionIdsToPin.push(f.sessionId); });
-                        if (obj.chapters) obj.chapters.forEach((c: any) => collectSessionIds(c));
-                    };
-                    collectSessionIds(item);
-                }
-            });
-
-            if (sessionIdsToPin.length === 0) {
-                showToast("Cannot pin unknown recordings");
-                setIsLibrarySelectionMode(false);
-                setSelectedLibraryIds([]);
-                return;
-            }
-
-            const newSessions = { ...chatSessions };
-            const updates: [string, string][] = [];
-
-            // Determine new status based on first item
-            const firstSession = newSessions[sessionIdsToPin[0]];
-            // Safety check if session still exists
-            if (!firstSession) return;
-
-            const newStatus = !firstSession.pinned;
-
-            sessionIdsToPin.forEach(sid => {
-                if (newSessions[sid]) {
-                    newSessions[sid] = { ...newSessions[sid], pinned: newStatus };
-                    updates.push([`session_${sid}`, JSON.stringify(newSessions[sid])]);
-                }
-            });
-
-            setChatSessions(newSessions);
-            await safeMultiSet(updates);
-            setIsLibrarySelectionMode(false);
-            setSelectedLibraryIds([]);
-            showToast(newStatus ? "Audio Sessions Pinned" : "Audio Sessions Unpinned");
-            return;
-        }
 
         const newSessions = { ...chatSessions };
         const selectedSessions = selectedLibraryIds.map(id => newSessions[id]).filter(Boolean);
@@ -18110,65 +17320,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
         if (selectedLibraryIds.length === 0) return;
 
         // CASE 2: DELETE AUDIO FILES (Audio Tab) - Keep existing logic
-        if (libraryTab === 'audio') {
-            Alert.alert(
-                "Delete Audio Files",
-                `Permanently delete selected items?`,
-                [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                        text: "Delete",
-                        style: 'destructive',
-                        onPress: async () => {
-                            const idsToDelete = [...selectedLibraryIds];
-                            const filesToDelete: string[] = [];
 
-                            // Resolve IDs to file paths recursively
-                            for (const id of idsToDelete) {
-                                let item = audioFiles.find(f => f.id === id);
-                                if (!item) {
-                                    for (const top of audioFiles) {
-                                        if (top.isBook && top.chapters) {
-                                            const found = top.chapters.find((c: any) => c.id === id);
-                                            if (found) {
-                                                item = found;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (item) {
-                                    const collectUris = (obj: any) => {
-                                        if (obj.uri) filesToDelete.push(obj.uri);
-                                        if (obj.files) obj.files.forEach((f: any) => filesToDelete.push(f.uri));
-                                        if (obj.chapters) obj.chapters.forEach((c: any) => collectUris(c));
-                                    };
-                                    collectUris(item);
-                                }
-                            }
-
-                            // Perform deletion
-                            for (const uri of filesToDelete) {
-                                try {
-                                    await fs.deleteAsync(uri);
-                                } catch (e: any) {
-                                    console.log("Delete error", e);
-                                }
-                            }
-
-                            // Update list locally
-                            loadAudioFiles();
-
-                            setIsLibrarySelectionMode(false);
-                            setSelectedLibraryIds([]);
-                            showToast("Files Deleted");
-                        }
-                    }
-                ]
-            );
-            return;
-        }
 
         // DEFAULT: PERMANENT DELETE
         Alert.alert(
@@ -26357,7 +25509,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
                 {/* Controls */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-                    {/* Note: Pause/Resume works via global speak/stopTTS refs, but precise seeking requires being in the specific reader session */}
                     <TouchableOpacity onPress={async () => {
                         // NEW: Handle Custom Audio Pause/Resume
                         if (playingMeta?.id && customAudioUrisState[playingMeta.id] && customAudioPlayerRef.current) {
@@ -26372,21 +25523,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                         }
 
                         if (ttsStatus === 'playing') {
-                            // Pause current (Generic pause logic in speak handles this if active)
-                            if (currentSound.current) {
-                                currentSound.current.pause();
-                                speechState.current.isPaused = true;
-                                setTtsStatus('paused');
-                            } else {
-                                stopTTS(); // Offline mode difficult to pause without text context, so stop.
-                            }
-                        } else {
-                            // Resume
-                            if (currentSound.current) {
-                                currentSound.current.play();
-                                speechState.current.isPaused = false;
-                                setTtsStatus('playing');
-                            }
+                            stopTTS(); // Offline mode difficult to pause without text context
                         }
                     }}>
                         {ttsStatus === 'playing' ? (
@@ -27407,7 +26544,6 @@ Review the following raw transcribed text:
                                                 {[
                                                     { id: 'chats', label: 'Assistant', icon: NotebookPen },
                                                     { id: 'stories', label: 'Studio', icon: BookOpenText },
-                                                    { id: 'audio', label: 'Audio', icon: Headphones },
                                                     { id: 'questions', label: 'Test', icon: MonitorCheck },
                                                 ].map((tab: any) => {
                                                     const isActive = libraryTab === tab.id;
@@ -27615,352 +26751,7 @@ Review the following raw transcribed text:
                                                     }
                                                     renderItem={renderStoryItem}
                                                 />
-                                            ) : libraryTab === 'audio' ? (
-                                                <View style={{ flex: 1 }}>
-                                                    {/* Audio Header Stats */}
-                                                    <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 5, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <Text style={{ color: theme.secondary, fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' }}>
-                                                            {audioFiles.length} FILES FOUND
-                                                        </Text>
-                                                        <TouchableOpacity
-                                                            onPress={loadAudioFiles}
-                                                            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                                                        >
-                                                            <RefreshCcw size={12} color={primaryColor} />
-                                                            <Text style={{ color: primaryColor, fontSize: 12, fontWeight: 'bold' }}>Refresh</Text>
-                                                        </TouchableOpacity>
-                                                    </View>
-
-                                                    <FlatList
-                                                        key={isLandscape ? 'lib_land_audio' : 'lib_port_audio'} // Force remount on orientation change
-                                                        numColumns={isLandscape ? 2 : 1}
-                                                        columnWrapperStyle={isLandscape ? { justifyContent: 'space-between', gap: 15 } : null}
-                                                        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
-                                                        initialNumToRender={10}
-                                                        maxToRenderPerBatch={10}
-                                                        windowSize={5}
-                                                        removeClippedSubviews={true}
-                                                        // Use memoized data (which is just audioFiles, but consistent)
-                                                        data={filteredLibraryItems}
-                                                        ListFooterComponent={<View style={{ height: 20 }} />}
-                                                        keyExtractor={(item) => item.id}
-                                                        ListEmptyComponent={
-                                                            <View style={{ alignItems: 'center', marginTop: 50 }}>
-                                                                {isAudioLoading ? (
-                                                                    <ActivityIndicator size="large" color={primaryColor} />
-                                                                ) : (
-                                                                    <>
-                                                                        <Headphones size={48} color={theme.secondary} style={{ opacity: 0.3 }} />
-                                                                        <Text style={{ color: theme.secondary, marginTop: 10 }}>{uiData.staticText?.library?.empty || "No offline audio found."}</Text>
-                                                                        <TouchableOpacity onPress={() => setActiveTab('story')} style={{ marginTop: 20 }}>
-                                                                            <Text style={{ color: '#2563eb' }}>{uiData.staticText?.library?.emptySub || "Create a Story & Download Audio"}</Text>
-                                                                        </TouchableOpacity>
-                                                                    </>
-                                                                )}
-                                                            </View>
-                                                        }
-                                                        renderItem={({ item }: { item: any }) => {
-                                                            const containerStyle = isLandscape ? { flex: 0.5, marginBottom: 15 } : { marginBottom: 10 };
-
-                                                            return (
-                                                                <View style={containerStyle}>
-                                                                    {/* BOOK GROUP RENDER */}
-                                                                    {item.isBook ? (
-                                                                        /* CALCULATE GROUP SELECTION STATE */
-                                                                        (() => {
-                                                                            const chapterIds = item.chapters ? item.chapters.map((c: any) => c.id) : [];
-                                                                            const isGroupSelected = chapterIds.length > 0 && chapterIds.every((id: string) => selectedLibraryIds.includes(id));
-
-                                                                            const uniqueChaptersCount = new Set(item.chapters ? item.chapters.map((c: any) => c.matchedTitle || c.title) : []).size;
-
-                                                                            return (
-                                                                                <View style={{
-                                                                                    borderRadius: 16,
-                                                                                    backgroundColor: isGroupSelected ? (theme.id === 'day' ? '#eff6ff' : theme.highlight) : theme.uiBg,
-                                                                                    borderWidth: isGroupSelected ? 2 : 1,
-                                                                                    borderColor: isGroupSelected ? primaryColor : theme.border,
-                                                                                    overflow: 'hidden'
-                                                                                }}>
-                                                                                    <TouchableOpacity
-                                                                                        onPress={() => {
-                                                                                            if (isLibrarySelectionMode) {
-                                                                                                handleGroupSelection(chapterIds);
-                                                                                            } else {
-                                                                                                setExpandedAudioGroups((prev: Record<string, boolean>) => ({ ...prev, [item.id]: !prev[item.id] }));
-                                                                                            }
-                                                                                        }}
-                                                                                        onLongPress={() => {
-                                                                                            if (!isLibrarySelectionMode) {
-                                                                                                setIsLibrarySelectionMode(true);
-                                                                                                setSelectedLibraryIds(chapterIds);
-                                                                                            } else {
-                                                                                                handleGroupSelection(chapterIds);
-                                                                                            }
-                                                                                        }}
-                                                                                        activeOpacity={0.8}
-                                                                                        style={{ flexDirection: 'row', alignItems: 'center', padding: 12 }}
-                                                                                    >
-                                                                                        {isLibrarySelectionMode && (
-                                                                                            <View style={{
-                                                                                                width: 18, height: 18, borderRadius: 9,
-                                                                                                borderWidth: 2, borderColor: isGroupSelected ? primaryColor : theme.secondary,
-                                                                                                backgroundColor: isGroupSelected ? primaryColor : 'transparent',
-                                                                                                alignItems: 'center', justifyContent: 'center',
-                                                                                                marginRight: 12
-                                                                                            }}>
-                                                                                                {isGroupSelected && <Check size={10} color="white" />}
-                                                                                            </View>
-                                                                                        )}
-
-                                                                                        <View style={{ width: 48, height: 48, borderRadius: 8, marginRight: 12, backgroundColor: theme.highlight, alignItems: 'center', justifyContent: 'center' }}>
-                                                                                            <BookAudio size={24} color={primaryColor} />
-                                                                                        </View>
-
-                                                                                        <View style={{ flex: 1 }}>
-                                                                                            <Text style={[styles.historyTitle, { color: theme.text, fontSize: 16 }]} numberOfLines={1}>{item.title}</Text>
-                                                                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                                                                                <Text style={{ color: theme.secondary, fontSize: 12, fontWeight: 'bold' }}>{uniqueChaptersCount} {uniqueChaptersCount === 1 ? 'Chapter' : 'Chapters'}</Text>
-                                                                                                <Text style={{ color: theme.secondary, fontSize: 12 }}>• {(item.totalSize / 1024 / 1024).toFixed(1)} MB</Text>
-                                                                                            </View>
-                                                                                        </View>
-
-                                                                                        <View style={{ padding: 8 }}>
-                                                                                            <ChevronDown size={20} color={theme.secondary} style={{ transform: [{ rotate: expandedAudioGroups[item.id] ? '180deg' : '0deg' }] }} />
-                                                                                        </View>
-                                                                                    </TouchableOpacity>
-
-                                                                                    {expandedAudioGroups[item.id] && (
-                                                                                        <View style={{ borderTopWidth: 1, borderTopColor: theme.border, backgroundColor: theme.bg }}>
-                                                                                            {(() => {
-                                                                                                // Group sibling chapters by title to avoid duplicates
-                                                                                                const groupedChapters: any[] = [];
-                                                                                                const titleMap = new Map();
-
-                                                                                                item.chapters.forEach((chapter: any) => {
-                                                                                                    const title = chapter.matchedTitle;
-                                                                                                    if (!titleMap.has(title)) {
-                                                                                                        const newGroup = { ...chapter, parts: [chapter] };
-                                                                                                        titleMap.set(title, newGroup);
-                                                                                                        groupedChapters.push(newGroup);
-                                                                                                    } else {
-                                                                                                        const group = titleMap.get(title);
-                                                                                                        group.parts.push(chapter);
-                                                                                                        group.totalSize = (group.totalSize || group.size || 0) + (chapter.totalSize || chapter.size || 0);
-                                                                                                    }
-                                                                                                });
-
-                                                                                                return groupedChapters.map((chapter: any, cIdx: number) => {
-                                                                                                    // Configure proper group structure for playback if multiple parts exist
-                                                                                                    if (chapter.parts && chapter.parts.length > 1) {
-                                                                                                        chapter.isGroup = true;
-                                                                                                        chapter.files = chapter.parts;
-                                                                                                    }
-
-                                                                                                    return (
-                                                                                                        <TouchableOpacity
-                                                                                                            key={chapter.id}
-                                                                                                            onPress={() => {
-                                                                                                                if (isLibrarySelectionMode) {
-                                                                                                                    const id = chapter.id;
-                                                                                                                    const newIds = selectedLibraryIds.includes(id)
-                                                                                                                        ? selectedLibraryIds.filter(i => i !== id)
-                                                                                                                        : [...selectedLibraryIds, id];
-                                                                                                                    setSelectedLibraryIds(newIds);
-                                                                                                                    if (newIds.length === 0) setIsLibrarySelectionMode(false);
-                                                                                                                } else {
-                                                                                                                    const updatedChapter = { ...chapter, timestamp: new Date().toISOString() };
-                                                                                                                    if (chatSessions[chapter.id]) {
-                                                                                                                        setChatSessions((prev: any) => ({ ...prev, [chapter.id]: updatedChapter }));
-                                                                                                                    }
-                                                                                                                    playLibraryItem(updatedChapter, true);
-                                                                                                                }
-                                                                                                            }}
-                                                                                                            onLongPress={() => {
-                                                                                                                if (!isLibrarySelectionMode) {
-                                                                                                                    setIsLibrarySelectionMode(true);
-                                                                                                                    setSelectedLibraryIds([chapter.id]);
-                                                                                                                } else {
-                                                                                                                    const id = chapter.id;
-                                                                                                                    const newIds = selectedLibraryIds.includes(id)
-                                                                                                                        ? selectedLibraryIds.filter(i => i !== id)
-                                                                                                                        : [...selectedLibraryIds, id];
-                                                                                                                    setSelectedLibraryIds(newIds);
-                                                                                                                    if (newIds.length === 0) setIsLibrarySelectionMode(false);
-                                                                                                                }
-                                                                                                            }}
-                                                                                                            style={{
-                                                                                                                paddingVertical: 12,
-                                                                                                                paddingHorizontal: 16,
-                                                                                                                borderBottomWidth: cIdx === groupedChapters.length - 1 ? 0 : 1,
-                                                                                                                borderBottomColor: theme.border,
-                                                                                                                flexDirection: 'row',
-                                                                                                                alignItems: 'center',
-                                                                                                                backgroundColor: selectedLibraryIds.includes(chapter.id) ? (theme.id === 'day' ? '#eff6ff' : theme.highlight) : 'transparent'
-                                                                                                            }}
-                                                                                                        >
-                                                                                                            {isLibrarySelectionMode && (
-                                                                                                                <View style={{
-                                                                                                                    width: 16, height: 16, borderRadius: 8,
-                                                                                                                    borderWidth: 1.5, borderColor: selectedLibraryIds.includes(chapter.id) ? primaryColor : theme.secondary,
-                                                                                                                    backgroundColor: selectedLibraryIds.includes(chapter.id) ? primaryColor : 'transparent',
-                                                                                                                    alignItems: 'center', justifyContent: 'center',
-                                                                                                                    marginRight: 10
-                                                                                                                }}>
-                                                                                                                    {selectedLibraryIds.includes(chapter.id) && <Check size={8} color="white" />}
-                                                                                                                </View>
-                                                                                                            )}
-
-                                                                                                            <View style={{ width: 32, height: 32, borderRadius: 8, marginRight: 10, backgroundColor: theme.buttonBg, alignItems: 'center', justifyContent: 'center' }}>
-                                                                                                                <Headphones size={16} color={theme.secondary} />
-                                                                                                            </View>
-
-                                                                                                            <View style={{ flex: 1 }}>
-                                                                                                                <Text style={{ color: theme.text, fontSize: 14, fontWeight: '500' }} numberOfLines={1}>
-                                                                                                                    {chapter.matchedTitle.replace(`${item.title}:`, '').trim()}
-                                                                                                                </Text>
-                                                                                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                                                                                    <Text style={{ color: theme.secondary, fontSize: 10 }}>
-                                                                                                                        {((chapter.totalSize || chapter.size) / 1024 / 1024).toFixed(1)} MB
-                                                                                                                    </Text>
-                                                                                                                    {chapter.parts && chapter.parts.length > 1 && (
-                                                                                                                        <Text style={{ color: theme.secondary, fontSize: 10, marginLeft: 4 }}>
-                                                                                                                            • {chapter.parts.length} Parts
-                                                                                                                        </Text>
-                                                                                                                    )}
-                                                                                                                </View>
-                                                                                                            </View>
-
-                                                                                                            <View style={{ flexDirection: 'row' }}>
-                                                                                                                <TouchableOpacity onPress={() => handleExportAudioFile(chapter, item)} disabled={isExportingAudioId !== null} style={{ padding: 6 }}>
-                                                                                                                    {isExportingAudioId === chapter.id ? <ActivityIndicator size="small" color={theme.text} /> : <DownloadCloud size={18} color={theme.secondary} />}
-                                                                                                                </TouchableOpacity>
-                                                                                                                <TouchableOpacity onPress={() => playLibraryItem(chapter, true)} style={{ padding: 6 }}>
-                                                                                                                    <PlayCircle size={18} color={primaryColor} />
-                                                                                                                </TouchableOpacity>
-                                                                                                            </View>
-                                                                                                        </TouchableOpacity>
-                                                                                                    );
-                                                                                                });
-                                                                                            })()}
-                                                                                        </View>
-                                                                                    )}
-                                                                                </View>
-                                                                            );
-                                                                        })()
-                                                                    ) : (
-                                                                        /* STANDALONE FILE RENDER */
-                                                                        <TouchableOpacity
-                                                                            onPress={async () => {
-                                                                                if (isLibrarySelectionMode) {
-                                                                                    // Toggle selection if in selection mode
-                                                                                    const id = item.id;
-                                                                                    const newIds = selectedLibraryIds.includes(id)
-                                                                                        ? selectedLibraryIds.filter(i => i !== id)
-                                                                                        : [...selectedLibraryIds, id];
-                                                                                    setSelectedLibraryIds(newIds);
-                                                                                    if (newIds.length === 0) setIsLibrarySelectionMode(false);
-                                                                                    return;
-                                                                                }
-                                                                                const updatedItem = { ...item, timestamp: new Date().toISOString() };
-                                                                                if (chatSessions[item.id]) {
-                                                                                    setChatSessions((prev: any) => ({ ...prev, [item.id]: updatedItem }));
-                                                                                }
-                                                                                playLibraryItem(updatedItem, true);
-                                                                            }}
-                                                                            onLongPress={() => {
-                                                                                if (!isLibrarySelectionMode) {
-                                                                                    setIsLibrarySelectionMode(true);
-                                                                                    setSelectedLibraryIds([item.id]);
-                                                                                } else {
-                                                                                    const id = item.id;
-                                                                                    const newIds = selectedLibraryIds.includes(id)
-                                                                                        ? selectedLibraryIds.filter(i => i !== id)
-                                                                                        : [...selectedLibraryIds, id];
-                                                                                    setSelectedLibraryIds(newIds);
-                                                                                    if (newIds.length === 0) setIsLibrarySelectionMode(false);
-                                                                                }
-                                                                            }}
-                                                                            delayLongPress={300}
-                                                                            activeOpacity={0.8}
-                                                                            style={[
-                                                                                styles.historyItem,
-                                                                                {
-                                                                                    backgroundColor: selectedLibraryIds.includes(item.id) ? (theme.id === 'day' ? '#eff6ff' : theme.highlight) : theme.uiBg,
-                                                                                    borderColor: selectedLibraryIds.includes(item.id) ? primaryColor : theme.border,
-                                                                                    flexDirection: 'row',
-                                                                                    alignItems: 'center',
-                                                                                    paddingRight: 10,
-                                                                                    borderWidth: selectedLibraryIds.includes(item.id) ? 2 : 1
-                                                                                }
-                                                                            ]}
-                                                                        >
-                                                                            <View style={{ flex: 1 }}>
-                                                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                                                    {isLibrarySelectionMode && (
-                                                                                        <View style={{
-                                                                                            width: 18, height: 18, borderRadius: 9,
-                                                                                            borderWidth: 2, borderColor: selectedLibraryIds.includes(item.id) ? primaryColor : theme.secondary,
-                                                                                            backgroundColor: selectedLibraryIds.includes(item.id) ? primaryColor : 'transparent',
-                                                                                            alignItems: 'center', justifyContent: 'center',
-                                                                                            marginRight: 6
-                                                                                        }}>
-                                                                                            {selectedLibraryIds.includes(item.id) && <Check size={10} color="white" />}
-                                                                                        </View>
-                                                                                    )}
-
-                                                                                    {/* Show Pin if linked session is pinned */}
-                                                                                    {item.sessionId && chatSessions[item.sessionId]?.pinned && (
-                                                                                        <Pin size={14} color={primaryColor} fill={primaryColor} style={{ transform: [{ rotate: '45deg' }] }} />
-                                                                                    )}
-
-                                                                                    <View style={{ width: 40, height: 40, borderRadius: 8, marginRight: 8, backgroundColor: item.matchedTitle ? theme.highlight : '#f3f4f6', alignItems: 'center', justifyContent: 'center' }}>
-                                                                                        {item.matchedTitle ? (
-                                                                                            <BookOpenText size={20} color={primaryColor} />
-                                                                                        ) : (
-                                                                                            <Headphones size={20} color="#9ca3af" />
-                                                                                        )}
-                                                                                    </View>
-
-                                                                                    <View style={{ flex: 1 }}>
-                                                                                        <Text style={[styles.historyTitle, { color: theme.text }]} numberOfLines={1}>
-                                                                                            {item.matchedTitle || "Unknown Recording"}
-                                                                                        </Text>
-                                                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                                                                                            {item.isGroup ? (
-                                                                                                <View style={{ backgroundColor: theme.buttonBg, paddingHorizontal: 6, borderRadius: 4 }}>
-                                                                                                    <Text style={{ color: theme.text, fontSize: 10, fontWeight: 'bold' }}>{item.files.length} PARTS</Text>
-                                                                                                </View>
-                                                                                            ) : (
-                                                                                                item.partInfo && (
-                                                                                                    <View style={{ backgroundColor: theme.buttonBg, paddingHorizontal: 4, borderRadius: 4 }}>
-                                                                                                        <Text style={{ color: theme.text, fontSize: 10, fontWeight: 'bold' }}>{item.partInfo}</Text>
-                                                                                                    </View>
-                                                                                                )
-                                                                                            )}
-                                                                                            <Text style={{ color: theme.secondary, fontSize: 11 }}>
-                                                                                                {new Date(item.modificationTime * 1000).toLocaleDateString()} • {(item.totalSize ? item.totalSize : item.size) / 1024 / 1024 < 0.1 ? "<0.1" : ((item.totalSize || item.size) / 1024 / 1024).toFixed(1)} MB
-                                                                                            </Text>
-                                                                                        </View>
-                                                                                    </View>
-                                                                                </View>
-                                                                            </View>
-
-                                                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                                                {/* Export Button (Cloud Download Icon) - Always Visible */}
-
-
-                                                                                <View style={{ padding: 10 }}>
-                                                                                    <PlayCircle size={24} color={primaryColor} />
-                                                                                </View>
-                                                                            </View>
-                                                                        </TouchableOpacity>
-                                                                    )}
-                                                                </View>
-                                                            );
-                                                        }}
-                                                    />
-                                                </View>
-                                            ) : (
+                                             ) : (
                                                 <View style={{ flex: 1 }}>
                                                     <View style={{ flexDirection: 'row', margin: 15, marginTop: 0, backgroundColor: theme.buttonBg, borderRadius: 12, padding: 4 }}>
                                                         <TouchableOpacity
@@ -31284,19 +30075,7 @@ Review the following raw transcribed text:
                                             }}>
                                                 <TouchableOpacity
                                                     onPress={async () => {
-                                                        // NEW: Handle Orphan Play/Pause directly
-                                                        if (readingSession?.toolId === 'orphan_audio') {
-                                                            if (currentSound.current) {
-                                                                const player = currentSound.current;
-                                                                if ((player as any).playing) {
-                                                                    (player as any).pause();
-                                                                    setTtsStatus('paused');
-                                                                } else {
-                                                                    (player as any).play();
-                                                                    setTtsStatus('playing');
-                                                                }
-                                                            }
-                                                        } else {
+
                                                             // CUSTOM AUDIO CHECK
                                                             const customAudio = customAudioUris[readingSession.id];
                                                             if (customAudio) {
@@ -31309,10 +30088,10 @@ Review the following raw transcribed text:
                                                                 }
                                                             } else {
                                                                 speak(readerFullText, 0, true);
-                                                            }
                                                         }
-                                                    }}
-                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    }
+                                                }
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                                 >
                                                     {ttsStatus === 'playing' ? (
                                                         <Pause size={24} color={theme.text} />
