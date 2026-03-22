@@ -24,7 +24,7 @@ import {
     GROQ_MODELS,
     IMAGE_MODELS
 } from '@/constants/models';
-import { createAudioPlayer, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -4936,31 +4936,31 @@ export default function App() {
         availableLanguages: ["English"],
         primaryLanguage: "English", // NEW
         voice: "Kore",
-        offlineSttEnabled: true, 
+        offlineSttEnabled: true,
         imageGenerationEnabled: true,
-        groqImageBaseUrl: "https://api.groq.com/openai/v1", 
-        llmProvider: "groq", 
+        groqImageBaseUrl: "https://api.groq.com/openai/v1",
+        llmProvider: "groq",
         showPersonalDictionary: true,
         preventSleep: false,
-        userProfession: "", 
-        userGoal: "", 
-        userBio: "", 
+        userProfession: "",
+        userGoal: "",
+        userBio: "",
         dictionaryLimit: 10000,
-        libraryLimit: 2000, 
+        libraryLimit: 2000,
         tapToDefine: true,
         keepLabelsEnglish: false,
         userName: "",
-        nameLocked: false, 
+        nameLocked: false,
         isExamMode: false,
-        quizTarget: 'quiz', 
-        modeLocked: false, 
-        isOnboarded: false, 
-        smartBio: "", 
-        offlineTtsLanguage: "en-GB", 
-        offlineVoice: "", 
-        textModels: [...GEMINI_MODELS], 
-        groqModels: [...GROQ_MODELS], 
-        imageModels: [...IMAGE_MODELS], 
+        quizTarget: 'quiz',
+        modeLocked: false,
+        isOnboarded: false,
+        smartBio: "",
+        offlineTtsLanguage: "en-GB",
+        offlineVoice: "",
+        textModels: [...GEMINI_MODELS],
+        groqModels: [...GROQ_MODELS],
+        imageModels: [...IMAGE_MODELS],
     });
 
     const [isSideMenuVisible, setIsSideMenuVisible] = useState(false);
@@ -12870,12 +12870,12 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
         let modelsToTry: string[] = [];
         for (const provider of providersToTry) {
             if (provider.id === 'gemini') {
-                modelsToTry = (displaySettings.imageModels || IMAGE_MODELS).filter((m: string) => 
+                modelsToTry = (displaySettings.imageModels || IMAGE_MODELS).filter((m: string) =>
                     GEMINI_IMAGE_MODELS.includes(m) || m.toLowerCase().includes('imagen')
                 );
                 if (modelsToTry.length === 0) modelsToTry = [...GEMINI_IMAGE_MODELS];
             } else {
-                modelsToTry = (displaySettings.imageModels || IMAGE_MODELS).filter((m: string) => 
+                modelsToTry = (displaySettings.imageModels || IMAGE_MODELS).filter((m: string) =>
                     GROQ_IMAGE_MODELS.includes(m) || (!m.toLowerCase().includes('imagen') && !GEMINI_IMAGE_MODELS.includes(m))
                 );
                 if (modelsToTry.length === 0) modelsToTry = [...GROQ_IMAGE_MODELS];
@@ -21774,7 +21774,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                                     style={[styles.menuItem, { opacity: 0.8, borderStyle: 'dashed', borderWidth: 1, borderColor: theme.border, marginTop: 8 }]}
                                 >
                                     <Plus size={20} color={theme.secondary} />
-                                    <Text style={[styles.menuItemText, { color: theme.secondary }]}>Generate New Feature</Text>
+                                    <Text style={[styles.menuItemText, { color: theme.secondary }]}></Text>
                                 </TouchableOpacity>
 
                                 {/* Custom Menu Features */}
@@ -24663,7 +24663,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                                 placeholder="Add Groq model id..."
                             />
 
-                             <EditableSelectionList
+                            <EditableSelectionList
                                 label="IMAGE GENERATION MODELS"
                                 items={displaySettings.imageModels || [...IMAGE_MODELS]}
                                 onSelect={() => { }}
@@ -28192,8 +28192,6 @@ Quick Tip: [explanation]`;
                                                 onScroll={(e) => {
                                                     if (isUserScrolling.current && !expandedTableData && readingSession?.id) scrollOffsets.current[readingSession.id] = e.nativeEvent.contentOffset.y;
                                                 }}
-                                                renderItem={renderReaderItem}
-                                                extraData={[readingSession?.highlights, displaySettings.tapToDefine, displaySettings.theme, displaySettings.fontSize, displaySettings.fontFamily, displaySettings.textStyles]}
                                                 renderItem={renderReaderItem}
                                                 extraData={[readingSession?.highlights, displaySettings.tapToDefine, displaySettings.theme, displaySettings.fontSize, displaySettings.fontFamily, displaySettings.textStyles]}
                                                 ListHeaderComponent={/* Same header component code as before but simpler since we have side panel */
