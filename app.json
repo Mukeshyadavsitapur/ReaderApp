@@ -2,14 +2,14 @@
   "expo": {
     "name": "ReaderApp",
     "slug": "ReaderApp",
-    "version": "16.1.11",
+    "version": "16.2.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "readerapp",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "buildNumber": "16.1.11",
+      "buildNumber": "16.2.0",
       "bundleIdentifier": "com.mkysitapur.ReaderApp",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "The app accesses your photos to let you analyze text and images from your library.",
@@ -40,7 +40,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.mkysitapur.ReaderApp",
-      "versionCode": 38,
+      "versionCode": 39,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",

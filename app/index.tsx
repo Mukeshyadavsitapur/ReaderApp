@@ -22,9 +22,7 @@ import {
     GEMINI_MODELS,
     GROQ_IMAGE_MODELS,
     GROQ_MODELS,
-    IMAGE_MODELS,
-    STT_GEMINI_MODELS,
-    STT_GROQ_MODELS
+    IMAGE_MODELS
 } from '@/constants/models';
 import { createAudioPlayer, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
@@ -4938,33 +4936,30 @@ export default function App() {
         availableLanguages: ["English"],
         primaryLanguage: "English", // NEW
         voice: "Kore",
-        offlineSttEnabled: true, // NEW: Offline STT Fallback
+        offlineSttEnabled: true, 
         imageGenerationEnabled: true,
-        llmProvider: "groq", // UPDATED: Default to Groq
+        llmProvider: "groq", 
         showPersonalDictionary: true,
         preventSleep: false,
-        userProfession: "", // NEW
-        userGoal: "", // NEW
-        userBio: "", // NEW
+        userProfession: "", 
+        userGoal: "", 
+        userBio: "", 
         dictionaryLimit: 10000,
-        libraryLimit: 2000, // UPDATED: Default limit increased to 2000
+        libraryLimit: 2000, 
         tapToDefine: true,
         keepLabelsEnglish: false,
         userName: "",
-        nameLocked: false, // NEW
+        nameLocked: false, 
         isExamMode: false,
-        quizTarget: 'quiz', // 'quiz' | 'flashcards'
-        modeLocked: false, // NEW: Lock state for name
-        isOnboarded: false, // NEW: Onboarding state
-        smartBio: "", // NEW: AI-generated summary
-        offlineTtsLanguage: "en-GB", // NEW: Default to English (UK) as per user observation
-        offlineVoice: "", // NEW: Specific voice identifier
-        textModels: [...GEMINI_MODELS], // Centralized
-        groqModels: [...GROQ_MODELS], // Centralized
-        imageModels: [...IMAGE_MODELS], // Centralized
-
-        sttGroqModels: [...STT_GROQ_MODELS], // Centralized
-        sttGeminiModels: ['gemini-3.1-pro', 'gemini-3-flash', 'gemini-3.1-flash-lite'], // Updated for March 2026
+        quizTarget: 'quiz', 
+        modeLocked: false, 
+        isOnboarded: false, 
+        smartBio: "", 
+        offlineTtsLanguage: "en-GB", 
+        offlineVoice: "", 
+        textModels: [...GEMINI_MODELS], 
+        groqModels: [...GROQ_MODELS], 
+        imageModels: [...IMAGE_MODELS], 
     });
 
     const [isSideMenuVisible, setIsSideMenuVisible] = useState(false);
@@ -5429,14 +5424,12 @@ export default function App() {
     const [minimizedSession, setMinimizedSession] = useState<any>(null);
     const [showFullScreenReference, setShowFullScreenReference] = useState(false);
     const [showReferenceText, setShowReferenceText] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
     const [customChatbotCharacters, setCustomChatbotCharacters] = useState<any[]>([]);
     const [customMenuFeatures, setCustomMenuFeatures] = useState<any[]>([]);
     const [showAddCharacterModal, setShowAddCharacterModal] = useState(false);
     const [showAddMenuFeatureModal, setShowAddMenuFeatureModal] = useState(false);
     const [newCharName, setNewCharName] = useState("");
     const [newCharPrompt, setNewCharPrompt] = useState("");
-    const [isTranscribing, setIsTranscribing] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
     // NEW: Sharing Lock State to prevent multiple tap crashes
@@ -5488,56 +5481,6 @@ export default function App() {
         liveChatbotSettingsRef.current = { isLiveChatbotMode, silenceTimeoutMs };
     }, [isLiveChatbotMode, silenceTimeoutMs]);
 
-    // --- CHATBOT VOICE AUTOMATION EFFECT ---
-    useEffect(() => {
-        let interval: any = null;
-        // Continue monitoring if in chatbot mode OR live chatbot mode
-        if ((isChatbotMode || isLiveChatbotMode) && isRecording) {
-            interval = setInterval(async () => {
-                try {
-                    const status = await recorder.getStatus();
-                    // Log to help diagnose
-                    console.log("Chatbot Metering:", status.metering);
-
-                    if (status.metering !== undefined) {
-                        const volume = status.metering;
-
-                        if (isLiveChatbotMode) {
-                            if (volume < -20) {
-                                if (!chatbotSilenceTimer.current) {
-                                    chatbotSilenceTimer.current = setTimeout(() => {
-                                        // Auto send after selected silence timeout
-                                        handleChatbotVoiceToggle();
-                                        chatbotSilenceTimer.current = null;
-                                    }, silenceTimeoutMs);
-                                }
-                            } else {
-                                if (chatbotSilenceTimer.current) {
-                                    clearTimeout(chatbotSilenceTimer.current);
-                                    chatbotSilenceTimer.current = null;
-                                }
-                            }
-                        } else {
-                            // Auto-send on silence has been disabled as per user request in normal mode. 
-                            // The user must click to send manually.
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Metering error", e);
-                }
-            }, 500);
-        } else {
-            if (chatbotSilenceTimer.current) {
-                clearTimeout(chatbotSilenceTimer.current);
-                chatbotSilenceTimer.current = null;
-            }
-        }
-
-        return () => {
-            if (interval) clearInterval(interval);
-            if (chatbotSilenceTimer.current) clearTimeout(chatbotSilenceTimer.current);
-        };
-    }, [isChatbotMode, isLiveChatbotMode, isRecording]);
 
 
     useEffect(() => {
@@ -6912,7 +6855,7 @@ export default function App() {
     useEffect(() => { quizSecondsElapsedRef.current = quizSecondsElapsed; }, [quizSecondsElapsed]);
 
     useEffect(() => {
-        if (isRecording) {
+        if (isOfflineRecognizing) {
             Animated.loop(
                 Animated.sequence([
                     Animated.timing(recordingOpacity, { toValue: 0.2, duration: 800, useNativeDriver: true }),
@@ -6923,7 +6866,7 @@ export default function App() {
             recordingOpacity.stopAnimation();
             recordingOpacity.setValue(1);
         }
-    }, [isRecording]);
+    }, [isOfflineRecognizing]);
 
     // NEW: Effect to handle auto-progression for Stories and Audio Tracks
     useEffect(() => {
@@ -6951,17 +6894,16 @@ export default function App() {
             }
 
             setTtsFinishedNaturally(0);
-        } else if (ttsFinishedNaturally > 0 && isLiveChatbotMode && activeChatbotChar) {
             // 3. LIVE CHATBOT MODE LOGIC
             // Automatically start the microphone when TTS finishes speaking the assistant's response
             setTimeout(() => {
-                if (isLiveChatbotMode && !isRecording && !isOfflineRecognizing && !isTranscribing) {
+                if (isLiveChatbotMode && !isOfflineRecognizing) {
                     handleChatbotVoiceToggle();
                 }
             }, 500);
             setTtsFinishedNaturally(0);
         }
-    }, [ttsFinishedNaturally, isLiveChatbotMode, isRecording, isTranscribing, activeChatbotChar]);
+    }, [ttsFinishedNaturally, isLiveChatbotMode, isOfflineRecognizing, activeChatbotChar]);
 
     const [isExportingAudio, setIsExportingAudio] = useState(false);
     const [ttsDownloadProgress, setTtsDownloadProgress] = useState(0);
@@ -9220,8 +9162,6 @@ export default function App() {
                         textModels: [...new Set([...GEMINI_MODELS, ...(parsed.textModels || [])])],
                         groqModels: [...new Set([...GROQ_MODELS, ...(parsed.groqModels || [])])],
                         imageModels: [...new Set([...IMAGE_MODELS, ...(parsed.imageModels || [])])],
-                        sttGroqModels: [...new Set([...STT_GROQ_MODELS, ...(parsed.sttGroqModels || [])])],
-                        sttGeminiModels: [...new Set([...STT_GEMINI_MODELS, ...(parsed.sttGeminiModels || [])])],
                         keepLabelsEnglish: parsed.keepLabelsEnglish !== undefined ? parsed.keepLabelsEnglish : false,
                         userName: parsed.userName || "",
                         userProfession: parsed.userProfession || "",
@@ -12705,11 +12645,8 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
         stopTTS();
 
         // Stop recording
-        if (isRecording) {
-            try {
-                setIsRecording(false);
-                await recorder.stop();
-            } catch (e) { }
+        if (isOfflineRecognizing) {
+            stopOfflineSTT();
         }
 
         // Clear timers
@@ -12826,8 +12763,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
     // NEW: Helper to render Mic Button for Notes/Story with consistent style
     const renderMicButton = (target: string, customStyle: any = {}, iconSize = 18) => {
-        const isCurrentlyActive = (isRecording || isOfflineRecognizing) && voiceTarget === target;
-        const isCurrentWorking = isCurrentlyActive || (isTranscribing && voiceTarget === target);
+        const isCurrentlyActive = isOfflineRecognizing && voiceTarget === target;
 
         return (
             <TouchableOpacity
@@ -12840,7 +12776,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: isCurrentlyActive ? 1 : 0, // Minimal by default
-                    borderColor: isCurrentWorking ? primaryColor : 'transparent',
+                    borderColor: isCurrentlyActive ? primaryColor : 'transparent',
                     zIndex: 10,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
@@ -12849,13 +12785,9 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                     elevation: isCurrentlyActive ? 2 : 0 // Minimal by default
                 }, customStyle]}
             >
-                {isTranscribing && voiceTarget === target ? (
-                    <ActivityIndicator size="small" color={primaryColor} />
-                ) : (
-                    <Animated.View style={{ opacity: voiceTarget === target ? recordingOpacity : 1 }}>
-                        <Mic size={iconSize} color={isCurrentlyActive ? '#ffffff' : theme.text} />
-                    </Animated.View>
-                )}
+                <Animated.View style={{ opacity: voiceTarget === target ? recordingOpacity : 1 }}>
+                    <Mic size={iconSize} color={isCurrentlyActive ? '#ffffff' : theme.text} />
+                </Animated.View>
             </TouchableOpacity>
         );
     };
@@ -12892,176 +12824,18 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
             else setQuickSearchQuery((prev: any) => (prev ? prev + " " : "") + newText); // Default for 'search' etc.
         };
 
-        const geminiKey = customApiKey || apiKey;
-        const groqKey = displaySettings.groqApiKey;
-        const provider = displaySettings.llmProvider || 'gemini';
-
-        const hasGemini = !!(geminiKey && geminiKey.trim());
-        const hasGroq = !!(groqKey && groqKey.trim());
-
-        // --- OFFLINE STT BRANCH (Manual or Automatic fallback if keys missing) ---
-        if (displaySettings.offlineSttEnabled || (!hasGemini && !hasGroq)) {
-            if (isOfflineRecognizing) {
-                stopOfflineSTT();
-            } else {
-                setVoiceTarget(target);
-                try {
-                    const text = await getOfflineSTT();
-                    if (text) {
-                        // FIXED: Use the 'target' parameter directly instead of 'voiceTarget' state to avoid stale state issues.
-                        applyVoiceText(target, text);
-                    }
-                } catch (e) {
-                    console.warn("Offline STT failed", e);
-                }
-            }
-            return;
-        }
-
-        if (isRecording) {
-            // Stop Recording
-            try {
-                setIsRecording(false);
-                if (isRecording) {
-                    const statusBeforeStop = await recorder.getStatus();
-                    await recorder.stop();
-                    const uri = recorder.uri;
-
-                    if (uri) {
-                        setIsTranscribing(true);
-
-                        const base64 = await fs.readAsStringAsync(uri, { encoding: fs.EncodingType.Base64 });
-                        const mimeType = Platform.OS === 'ios' ? 'audio/m4a' : 'audio/mp4';
-
-                        const transcribeWithModel = async (modelId: string) => {
-                            const selectedLang = displaySettings.language || "English";
-                            const promptText = `Transcribe, refine, and translate the user's voice input into ${selectedLang}. Return ONLY the result.`;
-                            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${geminiKey}`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                    contents: [{
-                                        role: "user",
-                                        parts: [{ text: promptText }, { inlineData: { mimeType: mimeType, data: base64 } }]
-                                    }]
-                                })
-                            });
-                            const data = await response.json();
-                            if (data.error) throw new Error(data.error.message || "API Error");
-                            return data.candidates?.[0]?.content?.parts?.[0]?.text;
-                        };
-
-                        const attemptGroqSTT = async () => {
-                            const whisperModels = ['whisper-large-v3-turbo', 'whisper-large-v3', 'distil-whisper-large-v3-en'];
-                            for (const whisperModel of whisperModels) {
-                                try {
-                                    const formData = new FormData();
-                                    formData.append('file', { uri, name: 'audio.m4a', type: 'audio/m4a' } as any);
-                                    formData.append('model', whisperModel);
-                                    const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-                                        method: 'POST',
-                                        headers: { 'Authorization': `Bearer ${groqKey}` },
-                                        body: formData
-                                    });
-                                    if (groqRes.ok) {
-                                        const groqData = await groqRes.json();
-                                        return groqData?.text?.trim() || null;
-                                    }
-                                } catch (e) { }
-                            }
-                            return null;
-                        };
-
-                        const attemptGeminiSTT = async () => {
-                            try { return await transcribeWithModel("gemini-2.5-flash-lite"); }
-                            catch (e) { return await transcribeWithModel("gemini-robotics-er-1.5-preview"); }
-                        };
-
-                        let text = null;
-                        if (hasGroq) {
-                            text = await attemptGroqSTT();
-                            if (!text && hasGemini) text = await attemptGeminiSTT();
-                        } else if (hasGemini) {
-                            text = await attemptGeminiSTT();
-                        }
-
-                        if (!text) {
-                            // AUTOMATIC FALLBACK ON FAILURE
-                            console.warn("Online STT failed, switching to offline fallback...");
-                            showToast("⚠️ Online STT failed. Using Offline fallback.");
-                            text = await getOfflineSTT();
-                        }
-
-                        if (text) {
-                            applyVoiceText(voiceTarget, text);
-                        }
-                    }
-                }
-            } catch (e: any) {
-                console.error("Voice Stop Error", e);
-                const errString = e.message ? e.message.toLowerCase() : "";
-                if (errString.includes("429") || errString.includes("quota")) {
-                    // AUTO FALLBACK ON QUOTA
-                    showToast("⚠️ Online limit reached. Switching to Offline.");
-                    const offlineText = await getOfflineSTT();
-                    if (offlineText) {
-                        applyVoiceText(voiceTarget, offlineText);
-                    }
-                } else {
-                    Alert.alert("Error", "Failed to process audio.");
-                }
-            } finally {
-                setIsTranscribing(false);
-                await setAudioModeAsync({
-                    allowsRecording: false,
-                    shouldPlayInBackground: true,
-                    playsInSilentMode: true,
-                    interruptionMode: 'duckOthers',
-                    shouldRouteThroughEarpiece: false,
-                });
-            }
+        // --- OFFLINE STT ONLY ---
+        if (isOfflineRecognizing) {
+            stopOfflineSTT();
         } else {
-            // Start Recording
+            setVoiceTarget(target);
             try {
-                const perm = await requestRecordingPermissionsAsync();
-                if (perm.status !== 'granted') {
-                    Alert.alert("Permission", "Microphone access is required for voice input.");
-                    return;
+                const text = await getOfflineSTT();
+                if (text) {
+                    applyVoiceText(target, text);
                 }
-
-                setVoiceTarget(target); // Set active target
-
-                // Configure for recording
-                await setAudioModeAsync({
-                    allowsRecording: true,
-                    shouldPlayInBackground: true,
-                    playsInSilentMode: true,
-                    interruptionMode: 'duckOthers',
-                    shouldRouteThroughEarpiece: false,
-                });
-
-                console.log("Preparing recorder...");
-                await recorder.prepareToRecordAsync(SPEECH_RECORDING_OPTIONS);
-                console.log("Recorder prepared. Starting recording...");
-
-                await recorder.record();
-                console.log("Recording started command sent.");
-
-                const statusAfterStart = await recorder.getStatus();
-                console.log("Status after record:", statusAfterStart);
-
-                setIsRecording(true);
             } catch (e) {
-                console.error("Voice Start Error", e);
-                Alert.alert("Error", "Could not start recording.");
-                // Try to restore defaults if start failed
-                await setAudioModeAsync({
-                    allowsRecording: false,
-                    shouldPlayInBackground: true,
-                    playsInSilentMode: true,
-                    interruptionMode: 'duckOthers',
-                    shouldRouteThroughEarpiece: false,
-                });
+                console.warn("Offline STT failed", e);
             }
         }
     };
@@ -24935,95 +24709,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
 
 
-                            <EditableSelectionList
-                                label="GEMINI STT MODELS (CHATBOT)"
-                                items={displaySettings.sttGeminiModels || ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro']}
-                                onSelect={() => { }}
-                                onAdd={(model: string) => {
-                                    const current = displaySettings.sttGeminiModels || ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
-                                    if (!current.includes(model)) {
-                                        saveSettings({ sttGeminiModels: [model, ...current] });
-                                    }
-                                }}
-                                onDelete={(model: string) => {
-                                    const current = displaySettings.sttGeminiModels || ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
-                                    saveSettings({ sttGeminiModels: current.filter((m: string) => m !== model) });
-                                }}
-                                theme={theme}
-                                placeholder="Add Gemini STT model id..."
-                            />
-
-                            <EditableSelectionList
-                                label="GROQ STT MODELS (CHATBOT)"
-                                items={displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3']}
-                                onSelect={() => { }}
-                                onAdd={(model: string) => {
-                                    const current = displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3'];
-                                    if (!current.includes(model)) {
-                                        saveSettings({ sttGroqModels: [model, ...current] });
-                                    }
-                                }}
-                                onDelete={(model: string) => {
-                                    const current = displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3'];
-                                    saveSettings({ sttGroqModels: current.filter((m: string) => m !== model) });
-                                }}
-                                theme={theme}
-                                placeholder="Add Groq STT model id..."
-                            />
-
-                            <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 20 }} />
-
-
-
-                            {/* Offline STT */}
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                                <View style={{ flex: 1, marginRight: 10 }}>
-                                    <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text, marginBottom: 4 }}>Offline STT</Text>
-                                    <Text style={{ fontSize: 12, color: theme.secondary }}>
-                                        Use device dictation (No internet needed)
-                                    </Text>
-                                    {!displaySettings.offlineSttEnabled && (
-                                        <Text style={{ fontSize: 11, color: '#f97316', marginTop: 4, fontStyle: 'italic' }}>
-                                            ⚠️ Note: Online STT may slow down AI response times.
-                                        </Text>
-                                    )}
-                                </View>
-                                <TouchableOpacity
-                                    activeOpacity={0.8}
-                                    onPress={() => saveSettings({ offlineSttEnabled: !displaySettings.offlineSttEnabled })}
-                                    style={{
-                                        width: 60,
-                                        height: 32,
-                                        backgroundColor: displaySettings.offlineSttEnabled ? '#22c55e' : theme.buttonBg,
-                                        borderRadius: 16,
-                                        borderWidth: 1,
-                                        borderColor: displaySettings.offlineSttEnabled ? '#22c55e' : theme.border,
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        paddingHorizontal: 4,
-                                        justifyContent: displaySettings.offlineSttEnabled ? 'flex-end' : 'flex-start'
-                                    }}
-                                >
-                                    {displaySettings.offlineSttEnabled && (
-                                        <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold', marginRight: 6 }}>ON</Text>
-                                    )}
-                                    <View style={{
-                                        width: 24,
-                                        height: 24,
-                                        borderRadius: 12,
-                                        backgroundColor: 'white',
-                                        shadowColor: "#000",
-                                        shadowOffset: { width: 0, height: 1 },
-                                        shadowOpacity: 0.2,
-                                        shadowRadius: 1,
-                                        elevation: 2
-                                    }} />
-                                    {!displaySettings.offlineSttEnabled && (
-                                        <Text style={{ color: theme.secondary, fontSize: 10, fontWeight: 'bold', marginLeft: 6 }}>OFF</Text>
-                                    )}
-                                </TouchableOpacity>
-                            </View>
-
                         </>
                     )}
 
@@ -25904,240 +25589,21 @@ Quick Tip: [explanation]`;
             stopTTS();
         }
 
-        const hasGroq = !!(displaySettings.groqApiKey && displaySettings.groqApiKey.trim());
-        const hasGemini = !!((customApiKey || apiKey) && (customApiKey || apiKey).trim());
-
-        // --- OFFLINE STT BRANCH ---
-        if (displaySettings.offlineSttEnabled || (!hasGroq && !hasGemini)) {
-            if (isOfflineRecognizing) {
-                stopOfflineSTT();
-            } else {
-                try {
-                    const text = await getOfflineSTT();
-                    if (text) {
-                        handleChatbotSend(text);
-                    }
-                } catch (e) {
-                    console.warn("Chatbot Offline STT failed", e);
-                }
-            }
-            return;
-        }
-
-        if (isRecording) {
-            setIsRecording(false);
-            await recorder.stop();
-            const uri = recorder.uri;
-            if (uri) {
-                setIsTranscribing(true);
-                try {
-                    const text = await performSTT(uri);
-                    if (text) {
-                        handleChatbotSend(text);
-                    } else {
-                        // AUTOMATIC FALLBACK ON FAILURE
-                        console.warn("Chatbot Online STT failed, switching to offline fallback...");
-                        showToast("⚠️ Online STT failed. Using Offline fallback.");
-                        const offlineText = await getOfflineSTT();
-                        if (offlineText) handleChatbotSend(offlineText);
-                    }
-                } catch (sttErr) {
-                    console.warn("Chatbot STT Processing Error", sttErr);
-                    // AUTO FALLBACK ON ERROR
-                    showToast("⚠️ Connection issue. Switching to Offline.");
-                    const offlineText = await getOfflineSTT();
-                    if (offlineText) handleChatbotSend(offlineText);
-                } finally {
-                    setIsTranscribing(false);
-                }
-            }
+        // --- OFFLINE STT ONLY ---
+        if (isOfflineRecognizing) {
+            stopOfflineSTT();
         } else {
-            // Start recording
             try {
-                await recorder.prepareToRecordAsync(SPEECH_RECORDING_OPTIONS);
-                await recorder.record();
-                setIsRecording(true);
-
-                if (chatbotSilenceTimer.current) clearTimeout(chatbotSilenceTimer.current);
+                const text = await getOfflineSTT();
+                if (text) {
+                    handleChatbotSend(text);
+                }
             } catch (e) {
-                console.warn("Recorder Error", e);
+                console.warn("Chatbot Offline STT failed", e);
             }
         }
     };
 
-    // Helper for STT in chatbot context
-    const performSTT = async (uri: string) => {
-        const geminiKey = customApiKey || apiKey;
-        const groqKey = displaySettings.groqApiKey;
-        let rawTranscript = "";
-
-        // PRIORITY 1: Groq Whisper (much faster and more reliable)
-        if (groqKey && groqKey.trim()) {
-            const whisperModels = displaySettings.sttGroqModels || ['whisper-large-v3-turbo', 'whisper-large-v3'];
-            for (const modelId of whisperModels) {
-                try {
-                    const formData = new FormData();
-                    formData.append('file', { uri, name: 'audio.m4a', type: 'audio/m4a' } as any);
-                    formData.append('model', modelId);
-                    formData.append('response_format', 'json');
-
-                    const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${groqKey}` },
-                        body: formData
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        const text = data?.text?.trim();
-                        if (text) {
-                            console.log(`Chatbot STT (Groq ${modelId}) Raw Result:`, text);
-                            rawTranscript = text;
-                            break;
-                        }
-                    } else {
-                        console.warn(`Groq STT ${modelId} failed in chatbot, falling back...`, await response.text());
-                    }
-                } catch (e) {
-                    console.warn(`Groq STT Chatbot Error (${modelId}):`, e);
-                }
-            }
-        }
-
-        // PRIORITY 2: Gemini STT
-        if (geminiKey && geminiKey.trim() && !rawTranscript) {
-            const sttFallbackModels = displaySettings.sttGeminiModels || [
-                'gemini-3-flash-preview',
-                'gemini-2.5-flash',
-                'gemini-2.5-flash-lite',
-                'gemini-2.5-pro'
-            ];
-
-            for (const model of sttFallbackModels) {
-                try {
-                    const base64 = await fs.readAsStringAsync(uri, { encoding: fs.EncodingType.Base64 });
-                    const mimeType = Platform.OS === 'ios' ? 'audio/m4a' : 'audio/mp4';
-
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{
-                                role: "user",
-                                parts: [
-                                    { text: "Transcribe the following audio precisely. Return ONLY the text." },
-                                    { inlineData: { mimeType: mimeType, data: base64 } }
-                                ]
-                            }]
-                        })
-                    });
-                    const data = await response.json();
-                    if (data.error) {
-                        console.warn(`Gemini STT API Error (${model}):`, data.error.message);
-                        if (data.error.message?.includes("quota") || response.status === 429) {
-                            console.log(`Quota exceeded for ${model}, trying fallback...`);
-                            continue; // Try next model
-                        }
-                        break; // Fatal error for this key, stop
-                    } else {
-                        const transcript = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-                        if (transcript) {
-                            console.log(`Chatbot STT (Gemini ${model}) Raw Result:`, transcript);
-                            rawTranscript = transcript;
-                            break; // Success
-                        }
-                    }
-                } catch (e) {
-                    console.warn(`Gemini STT Chatbot Error (${model})`, e);
-                }
-            }
-        }
-
-        if (!rawTranscript) return null;
-
-        // --- SECONDARY STEP: LLM REFINEMENT (Synced with main app logic but NO TRANSLATION) ---
-        // This fixes grammar, punctuation, and "stuttering" while PRESERVING the original language.
-        try {
-            const refinementPrompt = `You are an expert transcription assistant.
-Review the following raw transcribed text:
-1. Fix grammar, punctuation, and capitalization.
-2. Remove filler words (ums, ahs, repeating words) and stuttering.
-3. CRITICAL: DO NOT translate the text. Keep it in its ORIGINAL language.
-4. Return ONLY the polished final text. Do not add explanations.`;
-
-            if (groqKey) {
-                const groqModel = displaySettings.groqModel || 'llama-3.3-70b-versatile';
-                const refineRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${groqKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: groqModel,
-                        messages: [
-                            { role: 'system', content: refinementPrompt },
-                            { role: 'user', content: `Raw transcript:\n${rawTranscript}` }
-                        ],
-                        temperature: 0.1,
-                        max_tokens: 1024
-                    })
-                });
-
-                if (refineRes.ok) {
-                    const refineData = await refineRes.json();
-                    const refinedText = refineData.choices?.[0]?.message?.content?.trim();
-                    if (refinedText) {
-                        console.log("Chatbot STT (Groq Refined) Result:", refinedText);
-                        return refinedText;
-                    }
-                }
-            }
-
-            if (geminiKey) {
-                const refineFallbackModels = [
-                    'gemini-3-flash-preview',
-                    'gemini-2.5-flash',
-                    'gemini-2.5-flash-lite',
-                    'gemini-2.5-pro'
-                ];
-
-                for (const model of refineFallbackModels) {
-                    try {
-                        const refineRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                contents: [{
-                                    role: "user",
-                                    parts: [{ text: `${refinementPrompt}\n\nRaw transcript:\n${rawTranscript}` }]
-                                }]
-                            })
-                        });
-                        const refineData = await refineRes.json();
-                        if (refineData.error) {
-                            console.warn(`Gemini Refinement Error (${model}):`, refineData.error.message);
-                            if (refineData.error.message?.includes("quota") || refineRes.status === 429) {
-                                continue; // Try next model
-                            }
-                            break;
-                        }
-                        const refinedText = refineData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-                        if (refinedText) {
-                            console.log(`Chatbot STT (Gemini Refining ${model}) Result:`, refinedText);
-                            return refinedText;
-                        }
-                    } catch (err) {
-                        console.warn(`Gemini STT Refinement failed (${model}):`, err);
-                    }
-                }
-            }
-        } catch (err) {
-            console.warn("Chatbot STT Refinement sequence failed, using raw:", err);
-        }
-
-        return rawTranscript;
-    };
 
     const renderChatbotMessaging = () => {
         if (!activeChatbotChar) return null;
@@ -26167,8 +25633,7 @@ Review the following raw transcribed text:
                     speak(cleanTextForDisplay(text), 0, false, true, "Chatbot", true);
                 }}
                 onSwitchLanguage={switchChatBubbleLanguage}
-                isRecording={isRecording || isOfflineRecognizing}
-                isTranscribing={isTranscribing}
+                isRecording={isOfflineRecognizing}
                 speakingMsgId={chatbotSpeakingMsgId}
                 translatingMsgId={chatbotTranslatingMsgId}
                 brainstormingMsgId={chatbotBrainstormingMsgId}
@@ -27860,7 +27325,7 @@ Review the following raw transcribed text:
                                                                 />
                                                                 {renderMicButton('note_body', {
                                                                     position: 'absolute', bottom: 20, right: 15,
-                                                                    backgroundColor: ((isRecording || isOfflineRecognizing) && voiceTarget === 'note_body') ? '#ef4444' : theme.uiBg,
+                                                                    backgroundColor: (isOfflineRecognizing && voiceTarget === 'note_body') ? '#ef4444' : theme.uiBg,
                                                                 }, 20)}
                                                             </View>
                                                         </View>
@@ -28175,7 +27640,7 @@ Review the following raw transcribed text:
                                                                 width: 44,
                                                                 height: 44,
                                                                 borderRadius: 22,
-                                                                backgroundColor: (isRecording && voiceTarget === 'note_body') ? '#ef4444' : theme.uiBg,
+                                                                backgroundColor: (isOfflineRecognizing && voiceTarget === 'note_body') ? '#ef4444' : theme.uiBg,
                                                             }, 20)}
 
                                                             {currentNoteSummary ? (

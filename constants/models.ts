@@ -34,16 +34,3 @@ export const IMAGE_MODELS = [
     ...GEMINI_IMAGE_MODELS,
     ...GROQ_IMAGE_MODELS
 ];
-
-export const STT_GROQ_MODELS = [
-    "whisper-large-v3-turbo",
-    "whisper-large-v3"
-];
-
-export const STT_GEMINI_MODELS = [
-    "gemini-3.1-pro",
-    "gemini-3-flash",
-    "gemini-3.1-flash-lite",
-    "gemini-2.5-pro",
-    "gemini-2.5-flash"
-];

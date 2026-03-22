@@ -44,7 +44,6 @@ interface GeminiChatProps {
     onTTS: (text: string, msgId: string) => void;
     onSwitchLanguage: (msg: Message) => void;
     isRecording: boolean;
-    isTranscribing: boolean;
     speakingMsgId: string | null;
     translatingMsgId: string | null;
     brainstormingMsgId: string | null;
@@ -74,7 +73,6 @@ const GeminiChat: React.FC<GeminiChatProps> = ({
     onTTS,
     onSwitchLanguage,
     isRecording,
-    isTranscribing,
     speakingMsgId,
     translatingMsgId,
     brainstormingMsgId,
