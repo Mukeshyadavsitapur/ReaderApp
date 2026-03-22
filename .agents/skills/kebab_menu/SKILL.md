@@ -37,7 +37,6 @@ Each menu item consists of an icon and a label. Standard items include:
 - `Share`: `Share2` icon -> `onShare()`
 - `Appearance`: `Palette` icon -> `setShowAppearance(true)`
 - `Audio Upload`: `Music` icon -> `handleUploadAudio()`
-- `TTS/Audio Playback`: `Volume2`/`Square` icon -> TTS logic.
 - `Minimize` (Landscape only): `Maximize2` icon -> Closes expanded search.
 - `Exit Reader`: `X` icon (`#ff4444`) -> `handleClose()`
 

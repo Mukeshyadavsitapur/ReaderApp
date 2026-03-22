@@ -21196,40 +21196,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                                         <Text style={[styles.menuItemText, { color: theme.text }]}>Upload Audio</Text>
                                     </TouchableOpacity>
 
-                                    {/* TTS / Audio Playback */}
-                                    <TouchableOpacity
-                                        style={styles.menuItem}
-                                        onPress={async () => {
-                                            setIsReaderMenuVisible(false);
-                                            const isPlayingCurrent = ttsStatus === 'playing' && playingMeta?.id === readingSession?.id;
-                                            if (ttsStatus === 'stopped') {
-                                                const sessionId = readingSession?.id;
-                                                if (sessionId && (customAudioUris as any)[sessionId]) {
-                                                    const played = await playCustomAudio(sessionId);
-                                                    if (played) {
-                                                        setPlayingMeta({ id: readingSession.id, title: readingSession.title });
-                                                        return;
-                                                    }
-                                                }
-                                                speak(readingSession?.messages[0]?.content);
-                                                setPlayingMeta({ id: readingSession.id, title: readingSession.title });
-                                            } else {
-                                                stopTTS();
-                                                stopCustomAudio();
-                                            }
-                                        }}
-                                    >
-                                        {isTtsDownloading ? (
-                                            <ActivityIndicator size="small" color={primaryColor} />
-                                        ) : ((ttsStatus === 'playing' && playingMeta?.id === readingSession?.id) || isCustomAudioPlaying) ? (
-                                            <Square size={18} color={primaryColor} fill={primaryColor} />
-                                        ) : (
-                                            <Volume2 size={20} color={primaryColor} />
-                                        )}
-                                        <Text style={[styles.menuItemText, { color: theme.text }]}>
-                                            {((ttsStatus === 'playing' && playingMeta?.id === readingSession?.id) || isCustomAudioPlaying) ? "Stop Audio" : "Play Audio"}
-                                        </Text>
-                                    </TouchableOpacity>
 
                                     {isLandscape && (
                                         <TouchableOpacity
@@ -28228,6 +28194,8 @@ Quick Tip: [explanation]`;
                                                 }}
                                                 renderItem={renderReaderItem}
                                                 extraData={[readingSession?.highlights, displaySettings.tapToDefine, displaySettings.theme, displaySettings.fontSize, displaySettings.fontFamily, displaySettings.textStyles]}
+                                                renderItem={renderReaderItem}
+                                                extraData={[readingSession?.highlights, displaySettings.tapToDefine, displaySettings.theme, displaySettings.fontSize, displaySettings.fontFamily, displaySettings.textStyles]}
                                                 ListHeaderComponent={/* Same header component code as before but simpler since we have side panel */
                                                     <View>
                                                         {readingSession.image ? (
@@ -28517,6 +28485,55 @@ Quick Tip: [explanation]`;
                                                     </View>
                                                 }
                                             />
+
+                                            {/* Floating Audio Button (Landscape) */}
+                                            <TouchableOpacity
+                                                onPress={async () => {
+                                                    const isPlayingCurrent = ((ttsStatus === 'playing' && playingMeta?.id === readingSession?.id) || isCustomAudioPlaying);
+                                                    if (ttsStatus === 'stopped' && !isCustomAudioPlaying) {
+                                                        const sessionId = readingSession?.id;
+                                                        if (sessionId && (customAudioUris as any)[sessionId]) {
+                                                            const played = await playCustomAudio(sessionId);
+                                                            if (played) {
+                                                                setPlayingMeta({ id: readingSession.id, title: readingSession.title });
+                                                                return;
+                                                            }
+                                                        }
+                                                        speak(readingSession?.messages[0]?.content);
+                                                        setPlayingMeta({ id: readingSession.id, title: readingSession.title });
+                                                    } else {
+                                                        stopTTS();
+                                                        stopCustomAudio();
+                                                    }
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 15,
+                                                    right: 15,
+                                                    width: 40,
+                                                    height: 40,
+                                                    borderRadius: 20,
+                                                    backgroundColor: theme.uiBg,
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    zIndex: 100,
+                                                    shadowColor: "#000",
+                                                    shadowOffset: { width: 0, height: 2 },
+                                                    shadowOpacity: 0.2,
+                                                    shadowRadius: 4,
+                                                    elevation: 5,
+                                                    borderWidth: 1,
+                                                    borderColor: theme.border
+                                                }}
+                                            >
+                                                {isTtsDownloading ? (
+                                                    <ActivityIndicator size="small" color={primaryColor} />
+                                                ) : ((ttsStatus === 'playing' && playingMeta?.id === readingSession?.id) || isCustomAudioPlaying) ? (
+                                                    <Square size={20} color={primaryColor} fill={primaryColor} />
+                                                ) : (
+                                                    <Volume2 size={22} color={primaryColor} />
+                                                )}
+                                            </TouchableOpacity>
 
 
                                         </View>
@@ -29297,6 +29314,55 @@ Quick Tip: [explanation]`;
                                                 </View>
                                             }
                                         />
+
+                                        {/* Floating Audio Button (Portrait) */}
+                                        <TouchableOpacity
+                                            onPress={async () => {
+                                                const isPlayingCurrent = ((ttsStatus === 'playing' && playingMeta?.id === readingSession?.id) || isCustomAudioPlaying);
+                                                if (ttsStatus === 'stopped' && !isCustomAudioPlaying) {
+                                                    const sessionId = readingSession?.id;
+                                                    if (sessionId && (customAudioUris as any)[sessionId]) {
+                                                        const played = await playCustomAudio(sessionId);
+                                                        if (played) {
+                                                            setPlayingMeta({ id: readingSession.id, title: readingSession.title });
+                                                            return;
+                                                        }
+                                                    }
+                                                    speak(readingSession?.messages[0]?.content);
+                                                    setPlayingMeta({ id: readingSession.id, title: readingSession.title });
+                                                } else {
+                                                    stopTTS();
+                                                    stopCustomAudio();
+                                                }
+                                            }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 15,
+                                                right: 15,
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 20,
+                                                backgroundColor: theme.uiBg,
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                zIndex: 100,
+                                                shadowColor: "#000",
+                                                shadowOffset: { width: 0, height: 2 },
+                                                shadowOpacity: 0.2,
+                                                shadowRadius: 4,
+                                                elevation: 5,
+                                                borderWidth: 1,
+                                                borderColor: theme.border
+                                            }}
+                                        >
+                                            {isTtsDownloading ? (
+                                                <ActivityIndicator size="small" color={primaryColor} />
+                                            ) : ((ttsStatus === 'playing' && playingMeta?.id === readingSession?.id) || isCustomAudioPlaying) ? (
+                                                <Square size={20} color={primaryColor} fill={primaryColor} />
+                                            ) : (
+                                                <Volume2 size={22} color={primaryColor} />
+                                            )}
+                                        </TouchableOpacity>
 
                                         {/* NEW: Reader Controls moved to bottom (Gemini Style) */}
                                         {readingSession.toolId !== 'orphan_audio' && (
