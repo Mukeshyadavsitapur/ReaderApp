@@ -73,17 +73,16 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
             <View style={[styles.blob, { bottom: 100, right: -100, backgroundColor: primaryColor + '08' }]} />
             
             <View style={styles.watermarkContainer}>
-                <AppIcon 
-                    size={320} 
-                    tintColor={theme.text}
-                    monochrome={true}
-                    style={{ 
-                        opacity: theme.id === 'day' ? 0.05 : 0.04, 
-                        transform: [{ rotate: '-15deg' }],
-                        borderRadius: 160,
-                        overflow: 'hidden'
-                    }} 
-                />
+                <Text style={{ 
+                    fontSize: 180, 
+                    fontWeight: '900', 
+                    color: theme.text,
+                    opacity: theme.id === 'day' ? 0.04 : 0.03, // Subtle watermark
+                    transform: [{ rotate: '-15deg' }],
+                    textAlign: 'center'
+                }}>
+                    Reader
+                </Text>
             </View>
             
             <ResponsiveWrapper maxWidth={1000} style={styles.mainContent}>
@@ -121,9 +120,6 @@ const GeminiHome: React.FC<GeminiHomeProps> = ({
                                 </View>
                             </View>
                             
-                            <View style={[styles.sparkleContainer, { backgroundColor: theme.highlight }]}>
-                                <AppIcon size={18} />
-                            </View>
                         </LinearGradient>
                     </View>
 
@@ -247,16 +243,6 @@ const styles = StyleSheet.create({
         elevation: 2,
         position: 'relative',
         overflow: 'hidden',
-    },
-    sparkleContainer: {
-        position: 'absolute',
-        top: 15,
-        right: 15,
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     greetingContainer: {
         flexDirection: 'row',
