@@ -13173,11 +13173,11 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                     const cleanResponse = response.replace(/IMAGE_PROMPT:.*$/i, '').trim();
 
                     // Create a clear title for the new Q&A tab
-                    const newTitle = `Ask: ${queryToUse}`;
+                    const newTitle = `${queryToUse}`;
                     const safeTitle = newTitle.length > 50 ? newTitle.substring(0, 50) + "..." : newTitle;
 
-                    // Format the content to include context context
-                    const newContent = `**Context:** *${readingSession.title}*\n\n**Question:** ${queryToUse}\n\n----- \n\n${cleanResponse}`;
+                    // Format the content (Only AI response)
+                    const newContent = cleanResponse;
 
                     // UPDATE: Inherit toolId unless it's a special type that has its own tab (Stories, Notes, Quizzes)
                     const nextToolId = ['story_generator', 'quiz_save', 'quick_notes'].includes(readingSession.toolId)
@@ -13333,7 +13333,7 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                 id: generateId(),
                 timestamp: new Date().toISOString(),
                 messages: [{ role: "ai", content }],
-                title: `Ask: ${queryToUse}`,
+                title: `${queryToUse}`,
                 toolId: targetToolId,
                 image: image,
                 translations: { [displaySettings.language]: content },
