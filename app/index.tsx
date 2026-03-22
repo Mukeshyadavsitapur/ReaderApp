@@ -21749,11 +21749,13 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
 
                 {/* CENTER section */}
                 <View style={{ flex: 3, alignItems: 'center' }}>
-                    <Text style={[styles.appTitle, { color: headerTextColor, marginBottom: 0, textAlign: 'center', fontSize: 18, fontWeight: '700' }]} numberOfLines={1}>
-                        {appMode === 'reader' && readingSession?.title
-                            ? (readingSession.title.length > 28 ? readingSession.title.substring(0, 28) + '...' : readingSession.title)
-                            : (displayTitle.length > 28 ? displayTitle.substring(0, 28) + '...' : displayTitle)}
-                    </Text>
+                    {(appMode !== 'live' && !(activeTab === 'notes' && isEditingNote)) && (
+                        <Text style={[styles.appTitle, { color: headerTextColor, marginBottom: 0, textAlign: 'center', fontSize: 18, fontWeight: '700' }]} numberOfLines={1}>
+                            {appMode === 'reader' && readingSession?.title
+                                ? (readingSession.title.length > 28 ? readingSession.title.substring(0, 28) + '...' : readingSession.title)
+                                : (displayTitle.length > 28 ? displayTitle.substring(0, 28) + '...' : displayTitle)}
+                        </Text>
+                    )}
                 </View>
 
                 {/* RIGHT section */}
