@@ -16,8 +16,8 @@ ReaderApp is designed for deep learning. All generated educational content, espe
 - **Clarity**: Avoid jargon unless explained immediately.
 
 ### 2. Machine Learning Notes
-- **Naming**: If the user suggests a new name for a chapter (e.g., in the hamburger menu), update it immediately to match their preference.
-- **Visuals**: Always look for opportunities to add diagrams or images (using `generate_image`) to explain spatial or abstract ML concepts (e.g., neural network layers, gradient descent).
+- **Visual Policy**: Do NOT prompt the LLM to generate `IMAGE_PROMPT` tags for standard articles, book chapters, or machine learning notes. This saves generation time and prevents layout shifts.
+- **Exceptions**: Automatic image generation is reserved ONLY for **Quizzes** (where visuals are requested on-demand for specific questions).
 - **Interactive Elements**: Use `ConceptCard` for key definitions and `SimpleTable` for comparisons (e.g., Supervised vs. Unsupervised Learning).
 
 ### 3. Formula Formatting
@@ -31,7 +31,7 @@ ReaderApp is designed for deep learning. All generated educational content, espe
 - When generating a chapter, check the user's profile (`displaySettings`) for their profession and goal to tailor the examples (e.g., if they are an engineer, use engineering analogies).
 
 ### 2. Output Formatting
-- **Headers**: Use clear `#` and `##` hierarchy.
+- **Headers**: Always include a `# Title` header at the very beginning of the content. ReaderApp will no longer automatically strip or delete the first H1 header, ensuring a seamless transition from stream to static view.
 - **Lists**: Use bullet points for feature comparisons.
 - **Tables**: Use `SimpleTable` format for data-heavy sections (Strictly: No alignment colons `:---`).
 

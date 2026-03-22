@@ -88,8 +88,12 @@ const InteractiveText = React.memo(({
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (line === '\n') {
-                if (!inCodeBlock) resultLines.push({ isNewline: true, key: i });
-                else currentCode += '\n';
+                if (!inCodeBlock) {
+                    resultLines.push({ isNewline: true, key: i });
+                    charIndex += 1; // Count the newline character in the global offset
+                } else {
+                    currentCode += '\n';
+                }
                 continue;
             }
 
@@ -113,7 +117,7 @@ const InteractiveText = React.memo(({
 
             // Normal line processing (Headers, Lists, Formulas, etc.)
             let type = 'normal';
-            let cleanLine = line;
+            let cleanLine = line.trim();
 
             if (trimmed.length === 0) {
                 resultLines.push({ isNewline: false, isEmpty: true, key: i });

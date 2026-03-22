@@ -39,45 +39,22 @@ For tools like "Teacher" or "Health Guide":
 - **Update Logic**: `onChunk` updates the `content` property of the specific message ID in the `chatbotMessages` state array.
 - **Scroll**: Ensure the chat list auto-scrolls to the bottom as the content expands.
 
-## UI Consistency: Streaming → Reader Transition
+## UI Consistency & Unified Rendering
 
-> **CRITICAL RULE**: The `generating` mode overlay and the `reader` mode `renderReaderItem` must use **identical** `fontSize` and `lineHeight` values. A mismatch causes a jarring visual "shrink" or layout jump the moment the stream completes and the reader loads.
+ReaderApp uses a **Unified Rendering Flow** to eliminate layout shifts when a stream completes. Instead of unmounting the streaming view and mounting a reader view, both modes now share the exact same `FlatList` and component logic.
 
-### Generating Mode (`appMode === 'generating'`)
-The streaming text is rendered via `InteractiveText` with `generationData`:
+### 1. Unified Structure (`app/index.tsx`)
+The `FlatList`'s `data` prop dynamically switches based on `appMode`:
+- **Generating Mode**: Uses a single-item array containing the `generationData` wrapped in a temporary `Paragraph` object (`type: 'text'`).
+- **Reader Mode**: Uses the fully parsed `readerParagraphs` array from the session history.
 
-```tsx
-<InteractiveText
-    rawText={generationData || "Thinking..."}
-    theme={theme}
-    style={{
-        fontSize: 18 * displaySettings.fontSize,
-        color: theme.text,
-        lineHeight: 32 * displaySettings.fontSize,
-        textAlign: 'left'
-    }}
-    tapToDefineEnabled={false}
-/>
-```
+### 2. Style Synchronization
+To ensure zero "refresh" blink, the streaming and static views use identical style tokens:
+- **Typography**: Both use `getTypographyStyle(displaySettings.fontFamily, ...)` to ensure the font family and line scaling are parity-matched during and after generation.
+- **Paddings**: The container paddings and header layouts are shared, preventing the scroll position from jumping.
 
-### Reader Mode (`renderReaderItem`)
-The finalised session paragraphs are rendered with the **same** base values, plus a matching `marginBottom` to preserve the visual blank space built into the text blocks:
-
-```tsx
-style={[
-    styles.articleText,
-    {
-        color: theme.text,
-        fontSize: 18 * displaySettings.fontSize,
-        lineHeight: 32 * displaySettings.fontSize,
-        marginBottom: 32,
-        ...getTypographyStyle(displaySettings.fontFamily, displaySettings.textStyles)
-    }
-]}
-```
-
-**Both use `fontSize: 18` as the base and `lineHeight: 32` as the base, both scaled by `displaySettings.fontSize`.**
-Additionally, since reader mode strips blank `\n` spacing characters when converting to paragraphs, `InteractiveText` internally injects `dynamicMarginBottom = 16` for `# headings` and the outer wrapper injects `marginBottom: 32` for content paragraphs to visually mimic the empty line spacing of raw streaming text.
+### 3. Paragraph Grouping
+The `readerParagraphs` parser now groups text into logical blocks (flushing only on `\n\n`), matching the visual structure of the raw stream. This prevents lists from being broken into individual 1-line components with excessive margins.
 
 ## Best Practices
 1. **Error Handling**: Always provide a fallback to non-streaming or show a clear user alert if the stream breaks.

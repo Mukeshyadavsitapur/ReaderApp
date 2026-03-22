@@ -32,7 +32,7 @@ When a user selects a custom feature and clicks "Start":
     - In **Lesson Mode**: The `systemPrompt` is passed directly as the system instruction.
     - In **Discussion Mode**: A Q&A dialogue template is wrapped around the `systemPrompt`.
 4. **Streaming**: Uses `callLLM_Stream` to provide real-time feedback.
-5. **Image Generation**: Appends a `VISUAL REQUIREMENT` to the prompt. If the LLM generates an `IMAGE_PROMPT`, the app calls `generateImage` to create a cover/diagram.
+5. **Image Generation**: Automated visual prompt injection is disabled for Custom Scenarios to prevent layout shifts. Images should be requested explicitly or generated within the Quiz feature.
 
 ## UI Patterns
 

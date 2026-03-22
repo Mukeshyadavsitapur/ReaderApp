@@ -4942,7 +4942,7 @@ export default function App() {
         voice: "Kore",
         onlineTtsEnabled: false,
         offlineSttEnabled: true, // NEW: Offline STT Fallback
-        imageGenerationEnabled: false,
+        imageGenerationEnabled: true,
         llmProvider: "groq", // UPDATED: Default to Groq
         showPersonalDictionary: true,
         preventSleep: false,
@@ -26670,54 +26670,6 @@ STRICT REQUIREMENT: You MUST prioritize the "Specific AI Instructions/Bio" above
                                 </TouchableOpacity>
                             </View>
 
-                            {/* AI Images */}
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <View style={{ flex: 1, marginRight: 10 }}>
-                                    <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.text, marginBottom: 4 }}>AI Images</Text>
-                                    <Text style={{ fontSize: 12, color: theme.secondary }}>
-                                        {displaySettings.llmProvider === 'groq' ? 'Generate visual diagrams (via Gemini)' : 'Generate visual diagrams'}
-                                    </Text>
-                                    {displaySettings.imageGenerationEnabled && (
-                                        <Text style={{ fontSize: 11, color: '#f97316', marginTop: 4, fontStyle: 'italic' }}>
-                                            ⚠️ Note: AI Image generation may slow down AI response times.
-                                        </Text>
-                                    )}
-                                </View>
-                                <TouchableOpacity
-                                    activeOpacity={0.8}
-                                    onPress={() => saveSettings({ imageGenerationEnabled: !displaySettings.imageGenerationEnabled })}
-                                    style={{
-                                        width: 60,
-                                        height: 32,
-                                        backgroundColor: displaySettings.imageGenerationEnabled ? '#22c55e' : theme.buttonBg,
-                                        borderRadius: 16, // Round/Pill shape
-                                        borderWidth: 1,
-                                        borderColor: displaySettings.imageGenerationEnabled ? '#22c55e' : theme.border,
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        paddingHorizontal: 4,
-                                        justifyContent: displaySettings.imageGenerationEnabled ? 'flex-end' : 'flex-start'
-                                    }}
-                                >
-                                    {displaySettings.imageGenerationEnabled && (
-                                        <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold', marginRight: 6 }}>ON</Text>
-                                    )}
-                                    <View style={{
-                                        width: 24,
-                                        height: 24,
-                                        borderRadius: 12, // Circular thumb
-                                        backgroundColor: 'white',
-                                        shadowColor: "#000",
-                                        shadowOffset: { width: 0, height: 1 },
-                                        shadowOpacity: 0.2,
-                                        shadowRadius: 1,
-                                        elevation: 2
-                                    }} />
-                                    {!displaySettings.imageGenerationEnabled && (
-                                        <Text style={{ color: theme.secondary, fontSize: 10, fontWeight: 'bold', marginLeft: 6 }}>OFF</Text>
-                                    )}
-                                </TouchableOpacity>
-                            </View>
                         </>
                     )}
 

@@ -44,8 +44,10 @@ The reader operates on a list of `Paragraph` objects (usually `readingParagraphs
 
 ### `renderReaderItem` (The Dispatcher)
 A memoized function that determines which component to render based on `item.type`.
+- **Unified Rendering Architecture**: The `generating` (stream) and `reader` modes share the exact same `FlatList` component. The `data` prop dynamically switches between `generationData` (for streaming) and `readerParagraphs` (upon completion). This prevents unmounting and eliminates the "content refresh" blink.
 - **Key Pattern**: Always provide a `key` that includes `theme.id` to force a full re-render when switching between Day and Night modes.
-- **Style Inheritance**: Typography styles (font family, size, line height) are passed from `displaySettings` and applied using `getTypographyStyle`.
+- **Style Synchronization**: Typography styles (font family, size, line height) are applied identically to both the streaming state and the reader paragraphs. Use `getTypographyStyle` to ensure font parity.
+- **Paragraph Grouping**: Text is flushed into `InteractiveText` blocks only on double-newline `\n\n` boundaries to maintain logical grouping (e.g., lists and multi-line explanations).
 
 ## Offline Capabilities & AI Integration
 
